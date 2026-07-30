@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use App\Models\User;                    // ✅ Tambahkan import model User
+use App\Policies\UserProfilePolicy;     // ✅ Tambahkan import Policy
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,5 +25,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::before(function ($user, $ability) {
             return $user->hasRole('Super Admin') ? true : null;
         });
+
+        // ✅ Daftarkan Policy di sini
+        Gate::policy(User::class, UserProfilePolicy::class);
     }
 }

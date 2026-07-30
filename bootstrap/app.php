@@ -24,6 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Alias middleware jika perlu
         $middleware->alias([
             'cors' => HandleCors::class,
+            // 👇 TAMBAHKAN ALIAS SPATIE DI SINI
+            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
 
         // Konfigurasi untuk sanctum

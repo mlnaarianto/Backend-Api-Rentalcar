@@ -31,15 +31,15 @@ Route::prefix('auth')->group(function () {
 */
 Route::middleware('auth:sanctum')->group(function () {
 
-    // Auth Actions
+    // Auth Actions (Bisa diakses semua user yang sudah login)
     Route::post('/logout', [AuthController::class, 'logout']);
 
     // User / Profile Management (RESTful)
     // GET /api/user -> Mengambil data profil user beserta relasi personal_data
     Route::get('/user', [AuthController::class, 'user']);
 
-    // PATCH /api/user -> Update nama, avatar, serta data di tabel personal_data
-    // Menggunakan POST di Flutter dengan _method: PATCH
-    Route::patch('/user', [ProfileController::class, 'updateProfile']);
+    // PATCH /api/user -> Update profil, dilindungi middleware permission Spatie
+    Route::patch('/user', [ProfileController::class, 'updateProfile'])
+        ->middleware('permission:manage-profile');
 
 });

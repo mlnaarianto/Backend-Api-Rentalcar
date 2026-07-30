@@ -44,6 +44,12 @@ return [
         ],
     ],
 
+    // ✅ Tambahkan guard sanctum/api di sini jika diperlukan
+        'sanctum' => [
+            'driver' => 'sanctum',
+            'provider' => 'users',
+        ],
+
     /*
     |--------------------------------------------------------------------------
     | User Providers

@@ -2,37 +2,39 @@
 
 namespace App\Enums;
 
-use MadBox\FilamentSpatiePermissions\Contracts\RoleEnum;
+use Althinect\FilamentSpatieRolesPermissions\Contracts\RoleEnum;
 
-enum Role: string implements RoleEnum
+enum Role: string
 {
     case SuperAdmin = 'Super Admin';
-    case Admin = 'Admin';
-    case Operator = 'Operator';
-    case Driver = 'Driver';
-    case Customer = 'Customer';
+    case Perental = 'Perental';   // Pemilik / Pengelola Rental Mobil
+    case Penyewa = 'Penyewa';     // Customer / Penyewa Mobil
+    case Driver = 'Driver';       // Sopir (jika ada jasa driver)
 
     public function permissions(): array
     {
         return match ($this) {
-            Role::SuperAdmin => Permission::cases(),
-            Role::Admin => [
-                Permission::ManageUsers,
+            Role::SuperAdmin => Permission::cases(), // Super Admin memegang semua hak akses
+            
+            Role::Perental => [
                 Permission::ManageCars,
                 Permission::ManageBookings,
-            ],
-            Role::Operator => [
-                Permission::ManageCars,
-                Permission::ManageBookings,
-            ],
-            Role::Driver => [
-                Permission::ViewAssignedBooking,
+                Permission::ManagePayments,
                 Permission::UpdateBookingStatus,
+                Permission::ManageProfile, // ✅ Perental bisa update profil
             ],
-            Role::Customer => [
+            
+            Role::Penyewa => [
                 Permission::CreateBooking,
                 Permission::ViewOwnBooking,
                 Permission::CancelOwnBooking,
+                Permission::ManageProfile, // ✅ Penyewa bisa update profil & KTP
+            ],
+            
+            Role::Driver => [
+                Permission::ViewAssignedBooking,
+                Permission::UpdateBookingStatus,
+                Permission::ManageProfile, // ✅ Driver bisa update profil
             ],
         };
     }
