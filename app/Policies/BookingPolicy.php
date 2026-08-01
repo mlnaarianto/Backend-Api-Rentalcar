@@ -36,17 +36,14 @@ class BookingPolicy
      */
     public function view(User $user, Booking $booking): bool
     {
-        // Jika Perental, pastikan booking terkait mobil miliknya
         if ($user->hasRole(Role::Perental->value)) {
             return $booking->car && $booking->car->user_id === $user->id;
         }
 
-        // Jika Driver, pastikan ditugaskan ke booking tersebut
         if ($user->hasRole(Role::Driver->value)) {
             return $booking->driver_id === $user->id;
         }
 
-        // Jika Penyewa, pastikan itu miliknya sendiri
         return $booking->user_id === $user->id;
     }
 
@@ -55,7 +52,27 @@ class BookingPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo(Permission::CreateBooking->value);
+        // 1. Cek permission dasar
+        if (!$user->hasPermissionTo(Permission::CreateBooking->value)) {
+            return false;
+        }
+
+        // 2. 🛡️ Syarat Wajib: Cek apakah user sudah melengkapi Data Personal (No. HP & KTP)
+        $personalData = $user->personalData;
+        if (!$personalData || empty($personalData->phone) || empty($personalData->ktp_image)) {
+            return false;
+        }
+
+        // 3. 🛡️ Syarat Wajib: Cegah buat booking baru jika masih ada pesanan berstatus 'pending'
+        $hasPendingBooking = Booking::where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($hasPendingBooking) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -67,11 +84,31 @@ class BookingPolicy
             && $booking->user_id === $user->id;
     }
 
-    /**
-     * Menentukan apakah user (Perental / Driver / Admin) bisa mengubah status booking.
+   /**
+     * Menentukan apakah user bisa mengubah status booking atau melakukan pembayaran.
      */
     public function updateStatus(User $user, Booking $booking): bool
     {
-        return $user->hasPermissionTo(Permission::UpdateBookingStatus->value);
+        if (!$user->hasPermissionTo(Permission::UpdateBookingStatus->value)) {
+            return false;
+        }
+
+        // 1. Jika user adalah Penyewa, hanya boleh mengubah/membayar booking miliknya sendiri (misal: bayar QRIS)
+        if ($user->hasRole(Role::Penyewa->value)) {
+            return $booking->user_id === $user->id;
+        }
+
+        // 2. Jika user adalah Perental, pastikan booking terkait mobil miliknya 
+        // (Sehingga Perental bisa klik konfirmasi COD meskipun sewa lepas kunci / tanpa driver)
+        if ($user->hasRole(Role::Perental->value)) {
+            return $booking->car && $booking->car->user_id === $user->id;
+        }
+
+        // 3. Jika user adalah Driver, pastikan dia memang ditugaskan ke booking tersebut
+        if ($user->hasRole(Role::Driver->value)) {
+            return $booking->driver_id === $user->id;
+        }
+
+        return false;
     }
 }

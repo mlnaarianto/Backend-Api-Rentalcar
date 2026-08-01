@@ -70,11 +70,22 @@ class BookingController extends Controller
                 'message' => 'Booking berhasil dibuat. Silakan lakukan pembayaran.',
                 'data'    => $booking->load(['car', 'user', 'driver.personalData']),
             ], 201);
+            
         } catch (AuthorizationException $e) {
+            $user = $request->user();
+            $personal = $user->personalData;
+            
+            if (!$personal || empty($personal->phone) || empty($personal->ktp_image)) {
+                $message = 'Akses ditolak. Anda wajib melengkapi Data Personal (No. HP & KTP) terlebih dahulu.';
+            } else {
+                $message = 'Anda tidak dapat membuat booking baru karena masih memiliki pesanan berstatus pending.';
+            }
+
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Akses ditolak: Anda tidak memiliki izin membuat booking.',
+                'message' => $message,
             ], 403);
+            
         } catch (Exception $e) {
             return response()->json([
                 'status'  => 'error',
@@ -90,7 +101,7 @@ class BookingController extends Controller
     {
         try {
             $booking = Booking::with(['user.personalData', 'car', 'driver.personalData'])->findOrFail($id);
-            
+
             $this->authorize('view', $booking);
 
             return response()->json([
@@ -150,7 +161,6 @@ class BookingController extends Controller
 
             $this->authorize('updateStatus', $booking);
 
-            // Ubah 'required' menjadi 'sometimes' agar bisa memperbarui salah satu saja (misal hanya payment_status)
             $request->validate([
                 'status'         => 'sometimes|in:pending,confirmed,active,completed,cancelled',
                 'payment_status' => 'sometimes|in:unpaid,paid,refunded',

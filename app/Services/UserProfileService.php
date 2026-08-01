@@ -10,8 +10,12 @@ class UserProfileService
 {
     public function update(User $user, Request $request): User
     {
-        // 1. Update tabel users (Name & Avatar)
-        $userData = ['name' => $request->name];
+        // 1. Update tabel users (Name & Avatar hanya diupdate jika dikirim dari request)
+        $userData = [];
+
+        if ($request->filled('name')) {
+            $userData['name'] = $request->name;
+        }
 
         if ($request->hasFile('avatar')) {
             if ($user->avatar && !str_starts_with($user->avatar, 'http')) {
@@ -23,13 +27,16 @@ class UserProfileService
             $userData['avatar'] = asset('storage/' . $avatarPath);
         }
 
-        $user->update($userData);
+        // Hanya jalankan query update jika ada data user yang berubah
+        if (!empty($userData)) {
+            $user->update($userData);
+        }
 
         // 2. Update tabel personal_data (Phone, Birth Date, Address, KTP)
         $personalDataPayload = [
-            'phone' => $request->phone,
+            'phone'      => $request->phone,
             'birth_date' => $request->birth_date,
-            'address' => $request->address,
+            'address'    => $request->address,
         ];
 
         if ($request->hasFile('ktp')) {

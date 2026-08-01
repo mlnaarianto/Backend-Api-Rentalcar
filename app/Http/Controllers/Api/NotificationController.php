@@ -21,4 +21,17 @@ class NotificationController extends Controller
             'data'   => $notifications,
         ], 200);
     }
+
+    // 🟢 Tandai semua atau spesifik notifikasi sebagai sudah dibaca
+    public function markAsRead()
+    {
+        Notification::where('user_id', Auth::id())
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Notifikasi ditandai sudah dibaca',
+        ], 200);
+    }
 }

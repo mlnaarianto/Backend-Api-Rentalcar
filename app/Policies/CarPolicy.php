@@ -45,7 +45,21 @@ class CarPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo(Permission::ManageCars->value);
+        // 1. Cek apakah user memiliki permission untuk manage cars
+        $hasPermission = $user->hasPermissionTo(Permission::ManageCars->value);
+
+        if (!$hasPermission) {
+            return false;
+        }
+
+        // 2. Cek apakah user sudah melengkapi data personal (misal: relasi ada dan nomor telepon/KTP terisi)
+        $personalData = $user->personalData;
+
+        if (!$personalData || empty($personalData->phone) || empty($personalData->ktp_image)) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

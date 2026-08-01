@@ -24,27 +24,27 @@ class ProfileController extends Controller
         $this->authorize('update', $user);
 
         $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:20',
+            'name'       => 'sometimes|required|string|max:255', // 👈 Diubah menjadi 'sometimes' agar aman jika tidak dikirim dari Flutter
+            'phone'      => 'nullable|string|max:20',
             'birth_date' => 'nullable|date',
-            'address' => 'nullable|string',
-            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'ktp' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'address'    => 'nullable|string',
+            'avatar'     => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'ktp'        => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
         try {
             $updatedUser = $this->userProfileService->update($user, $request);
 
             return response()->json([
-                'status' => 'success',
+                'status'  => 'success',
                 'message' => 'Profil berhasil diperbarui',
-                'data' => $updatedUser
+                'data'    => $updatedUser
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Update Profile Error: ' . $e->getMessage());
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => 'Gagal memperbarui profil: ' . $e->getMessage()
             ], 500);
         }

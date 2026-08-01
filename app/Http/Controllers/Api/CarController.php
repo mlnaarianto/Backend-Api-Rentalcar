@@ -7,6 +7,7 @@ use App\Models\Car;
 use App\Services\CarService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Auth\Access\AuthorizationException;
 use Exception;
 
 class CarController extends Controller
@@ -32,6 +33,11 @@ class CarController extends Controller
                 'status' => 'success',
                 'data'   => $cars,
             ], 200);
+        } catch (AuthorizationException $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Akses ditolak.',
+            ], 403);
         } catch (Exception $e) {
             return response()->json([
                 'status'  => 'error',
@@ -45,24 +51,24 @@ class CarController extends Controller
      */
     public function store(Request $request)
     {
-        $this->authorize('create', Car::class);
-
-        $request->validate([
-            'name'                  => 'required|string|max:255',
-            'brand'                 => 'required|string|max:255',
-            'plate_number'          => 'required|string|unique:cars,plate_number',
-            'engine_type'           => 'required|string',
-            'fuel_spec'             => 'nullable|string',
-            'seats'                 => 'required|integer',
-            'year'                  => 'required|digits:4',
-            'price_per_day'         => 'required|numeric',
-            'driver_price_per_day'  => 'nullable|numeric', // 👈 Ditambahkan validasi tarif driver
-            'description'           => 'nullable|string',
-            'image'                 => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'status'                => 'nullable|in:tersedia,disewa,perbaikan',
-        ]);
-
         try {
+            $this->authorize('create', Car::class);
+
+            $request->validate([
+                'name'                  => 'required|string|max:255',
+                'brand'                 => 'required|string|max:255',
+                'plate_number'          => 'required|string|unique:cars,plate_number',
+                'engine_type'           => 'required|string',
+                'fuel_spec'             => 'nullable|string',
+                'seats'                 => 'required|integer',
+                'year'                  => 'required|digits:4',
+                'price_per_day'         => 'required|numeric',
+                'driver_price_per_day'  => 'nullable|numeric',
+                'description'           => 'nullable|string',
+                'image'                 => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'status'                => 'nullable|in:tersedia,disewa,perbaikan',
+            ]);
+
             $data = $request->except('image');
             $data['user_id'] = Auth::id(); 
 
@@ -76,6 +82,12 @@ class CarController extends Controller
                 'message' => 'Mobil berhasil ditambahkan',
                 'data'    => $car,
             ], 201);
+
+        } catch (AuthorizationException $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Akses ditolak. Anda wajib melengkapi Data Personal (No. HP & KTP) terlebih dahulu sebelum dapat menambahkan mobil.',
+            ], 403);
         } catch (Exception $e) {
             return response()->json([
                 'status'  => 'error',
@@ -98,6 +110,11 @@ class CarController extends Controller
                 'status' => 'success',
                 'data'   => $car,
             ], 200);
+        } catch (AuthorizationException $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Akses ditolak.',
+            ], 403);
         } catch (Exception $e) {
             return response()->json([
                 'status'  => 'error',
@@ -125,7 +142,7 @@ class CarController extends Controller
                 'seats'                 => 'sometimes|required|integer',
                 'year'                  => 'sometimes|required|digits:4',
                 'price_per_day'         => 'sometimes|required|numeric',
-                'driver_price_per_day'  => 'nullable|numeric', // 👈 Ditambahkan validasi update tarif driver
+                'driver_price_per_day'  => 'nullable|numeric',
                 'description'           => 'nullable|string',
                 'image'                 => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
                 'status'                => 'nullable|in:tersedia,disewa,perbaikan',
@@ -142,6 +159,11 @@ class CarController extends Controller
                 'message' => 'Data mobil berhasil diperbarui',
                 'data'    => $updatedCar,
             ], 200);
+        } catch (AuthorizationException $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Akses ditolak. Anda tidak memiliki izin memperbarui mobil ini.',
+            ], 403);
         } catch (Exception $e) {
             return response()->json([
                 'status'  => 'error',
@@ -166,6 +188,11 @@ class CarController extends Controller
                 'status'  => 'success',
                 'message' => 'Mobil berhasil dihapus',
             ], 200);
+        } catch (AuthorizationException $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Akses ditolak. Anda tidak memiliki izin menghapus mobil ini.',
+            ], 403);
         } catch (Exception $e) {
             return response()->json([
                 'status'  => 'error',
