@@ -39,6 +39,8 @@ class AuthController extends Controller
                 throw new Exception('Email tidak ditemukan dari Google');
             }
 
+            $userExists = User::where('email', $googleUser->email)->exists();
+
             $user = User::updateOrCreate(
                 ['email' => $googleUser->email],
                 [
@@ -50,10 +52,14 @@ class AuthController extends Controller
                 ]
             );
 
+            // Set default role 'Penyewa' jika user baru khusus web callback
+            if (!$userExists || $user->roles()->count() === 0) {
+                $user->assignRole('Penyewa');
+            }
+
             $token = $user->createToken('web-token')->plainTextToken;
 
             return redirect()->away('http://localhost:3000/auth/callback?token=' . $token);
-
         } catch (Exception $e) {
             Log::error('Google Callback Error: ' . $e->getMessage());
             return redirect()->away('http://localhost:3000/login?error=' . urlencode($e->getMessage()));
@@ -104,6 +110,9 @@ class AuthController extends Controller
                 'google_id' => $payload['sub'],
             ]));
 
+            // Cek apakah user sudah terdaftar sebelumnya
+            $userExists = User::where('email', $payload['email'])->exists();
+
             $user = User::updateOrCreate(
                 ['email' => $payload['email']],
                 [
@@ -115,6 +124,11 @@ class AuthController extends Controller
                 ]
             );
 
+            // 👇 SET DEFAULT ROLE SEBAGAI 'Penyewa' HANYA UNTUK USER GOOGLE BARU
+            if (!$userExists || $user->roles()->count() === 0) {
+                $user->assignRole('Penyewa');
+            }
+
             $token = $user->createToken('mobile-token')->plainTextToken;
 
             Log::info('User logged in successfully: ' . $user->email);
@@ -124,9 +138,16 @@ class AuthController extends Controller
                 'message'      => 'Login berhasil',
                 'access_token' => $token,
                 'token_type'   => 'Bearer',
-                'user'         => $user,
+                'user'         => [
+                    'id'          => $user->id,
+                    'name'        => $user->name,
+                    'email'       => $user->email,
+                    'login_type'  => $user->login_type,
+                    'avatar'      => $user->avatar,
+                    'roles'       => $user->getRoleNames(),
+                    'permissions' => $user->getAllPermissions()->pluck('name'),
+                ],
             ], 200);
-
         } catch (Exception $e) {
             Log::error('Google Mobile Auth Error: ' . $e->getMessage());
             return response()->json([
@@ -149,10 +170,8 @@ class AuthController extends Controller
         ]);
 
         try {
-            // Cari user berdasarkan email
             $user = User::where('email', $request->email)->first();
 
-            // Cek: user tidak ditemukan
             if (!$user) {
                 return response()->json([
                     'status'  => 'error',
@@ -160,7 +179,6 @@ class AuthController extends Controller
                 ], 401);
             }
 
-            // Cek: user ini bukan tipe sistem/manual (misal akun Google tanpa password)
             if (!in_array($user->login_type, ['system', 'manual'])) {
                 return response()->json([
                     'status'  => 'error',
@@ -168,7 +186,6 @@ class AuthController extends Controller
                 ], 403);
             }
 
-            // Cek: password salah
             if (!Hash::check($request->password, $user->password)) {
                 Log::warning('Failed manual login attempt for: ' . $request->email);
                 return response()->json([
@@ -177,7 +194,6 @@ class AuthController extends Controller
                 ], 401);
             }
 
-            // Buat token
             $token = $user->createToken('system-token')->plainTextToken;
 
             Log::info('System user logged in: ' . $user->email);
@@ -187,9 +203,16 @@ class AuthController extends Controller
                 'message'      => 'Login berhasil',
                 'access_token' => $token,
                 'token_type'   => 'Bearer',
-                'user'         => $user,
+                'user'         => [
+                    'id'          => $user->id,
+                    'name'        => $user->name,
+                    'email'       => $user->email,
+                    'login_type'  => $user->login_type,
+                    'avatar'      => $user->avatar,
+                    'roles'       => $user->getRoleNames(),
+                    'permissions' => $user->getAllPermissions()->pluck('name'),
+                ],
             ], 200);
-
         } catch (Exception $e) {
             Log::error('Manual Login Error: ' . $e->getMessage());
             return response()->json([
@@ -210,7 +233,16 @@ class AuthController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data'   => $user
+            'data'   => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'login_type' => $user->login_type,
+                'avatar' => $user->avatar,
+                'personal_data' => $user->personalData,
+                'roles' => $user->getRoleNames(),
+                'permissions' => $user->getAllPermissions()->pluck('name'),
+            ]
         ]);
     }
 

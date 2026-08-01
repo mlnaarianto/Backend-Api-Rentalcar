@@ -5,7 +5,9 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use App\Models\User;                    // ✅ Tambahkan import model User
-use App\Policies\UserProfilePolicy;     // ✅ Tambahkan import Policy
+use App\Models\Car;                     // ✅ Tambahkan import model Car
+use App\Policies\UserProfilePolicy;     // ✅ Tambahkan import Policy User
+use App\Policies\CarPolicy;             // ✅ Tambahkan import Policy Car
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,5 +30,6 @@ class AppServiceProvider extends ServiceProvider
 
         // ✅ Daftarkan Policy di sini
         Gate::policy(User::class, UserProfilePolicy::class);
+        Gate::policy(Car::class, CarPolicy::class); // 👈 Daftarkan Policy Car
     }
 }

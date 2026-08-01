@@ -4,9 +4,15 @@ namespace App\Enums;
 
 enum Permission: string
 {
+    // Manajemen Sistem & User
     case ManageUsers = 'manage-users';
     case ManageRoles = 'manage-roles';
-    case ManageCars = 'manage-cars';
+
+    // Manajemen Mobil (Mobil & Katalog)
+    case ManageCars = 'manage-cars'; // Untuk tambah/edit/hapus (Perental/Admin)
+    case ViewCars = 'view-cars';       // Untuk melihat daftar/detail mobil (Bisa untuk Penyewa/Driver)
+
+    // Manajemen Booking & Pembayaran
     case ManageBookings = 'manage-bookings';
     case ManagePayments = 'manage-payments';
     
@@ -14,7 +20,7 @@ enum Permission: string
     case CreateBooking = 'create-booking';
     case ViewOwnBooking = 'view-own-booking';
     case CancelOwnBooking = 'cancel-own-booking';
-    case ManageProfile = 'manage-profile'; // 👈 Wajib ada untuk update profil / KTP di Flutter
+    case ManageProfile = 'manage-profile'; // Wajib ada untuk update profil / KTP di Flutter
 
     // Hak akses untuk Driver / Perental
     case ViewAssignedBooking = 'view-assigned-booking';
