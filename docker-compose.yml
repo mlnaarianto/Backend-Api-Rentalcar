@@ -3,7 +3,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      # Hapus args UID/GID
+      args:
+        user: www-data
+        # Mengirimkan ID user aktif di Linux/Mac Anda secara otomatis
+        uid: 1000 
+        gid: 1000
     container_name: laravelbe_app
     working_dir: /var/www
     volumes:

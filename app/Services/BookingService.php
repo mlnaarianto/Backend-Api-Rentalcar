@@ -19,23 +19,23 @@ class BookingService
         $user = Auth::user();
 
         if ($user->hasRole('Super Admin')) {
-            return Booking::with(['user.personalData', 'car', 'driver.personalData'])->latest()->get();
-        } 
-        
+            return Booking::with(['user.personalData', 'car.user', 'driver.personalData'])->latest()->get();
+        }
+
         if ($user->hasRole('Perental')) {
-            return Booking::with(['user.personalData', 'car', 'driver.personalData'])
+            return Booking::with(['user.personalData', 'car.user', 'driver.personalData'])
                 ->whereHas('car', function ($query) use ($user) {
                     $query->where('user_id', $user->id);
                 })->latest()->get();
-        } 
-        
+        }
+
         if ($user->hasRole('Driver')) {
-            return Booking::with(['user.personalData', 'car', 'driver.personalData'])
+            return Booking::with(['user.personalData', 'car.user', 'driver.personalData'])
                 ->where('driver_id', $user->id)->latest()->get();
         }
 
         // Default untuk Penyewa (Customer)
-        return Booking::with(['user.personalData', 'car', 'driver.personalData'])
+        return Booking::with(['user.personalData', 'car.user', 'driver.personalData'])
             ->where('user_id', $user->id)->latest()->get();
     }
 
@@ -44,6 +44,18 @@ class BookingService
      */
     public function createBooking(array $data): Booking
     {
+        $user = Auth::user();
+        $personalData = $user->personalData;
+
+        // Validasi ekstra di Service layer untuk memastikan KTP & SIM lengkap
+        if (!$personalData || empty($personalData->ktp_image)) {
+            throw new Exception('Anda wajib melengkapi Foto KTP terlebih dahulu.');
+        }
+
+        if (empty($personalData->sim_number) || empty($personalData->sim_image)) {
+            throw new Exception('Anda wajib melengkapi Nomor dan Foto SIM terlebih dahulu sebelum melakukan pemesanan.');
+        }
+
         $car = Car::findOrFail($data['car_id']);
 
         // Cek status ketersediaan mobil
@@ -57,7 +69,7 @@ class BookingService
         $totalDays = $startDate->diffInDays($endDate) + 1; // Minimal 1 hari
 
         $withDriver = $data['with_driver'] ?? false;
-        
+
         // Ambil tarif driver secara dinamis dari data mobil (tidak hardcode)
         $driverFeePerDay = $withDriver ? ($car->driver_price_per_day ?? 0.00) : 0.00;
 
@@ -66,7 +78,7 @@ class BookingService
         $totalPrice = $totalCarPrice + $totalDriverFee;
 
         $booking = Booking::create([
-            'user_id'            => Auth::id(),
+            'user_id'            => $user->id,
             'car_id'             => $car->id,
             'start_date'         => $data['start_date'],
             'end_date'           => $data['end_date'],
@@ -122,18 +134,16 @@ class BookingService
      */
     public function updateBookingStatus(Booking $booking, array $data): Booking
     {
-        // Update status pesanan jika ada
         if (isset($data['status'])) {
             $booking->update(['status' => $data['status']]);
 
-            // Sinkronisasi status mobil berdasarkan status booking
             if ($data['status'] === 'active') {
                 $booking->car()->update(['status' => 'disewa']);
             } elseif ($data['status'] === 'completed' || $data['status'] === 'cancelled') {
                 $booking->car()->update(['status' => 'tersedia']);
             }
 
-            // 🔔 Kirim Notifikasi ke Penyewa terkait perubahan status pesanan
+            // 🔔 Kirim Notifikasi ke Penyewa
             Notification::create([
                 'user_id' => $booking->user_id,
                 'title'   => 'Status Pesanan Diperbarui',
@@ -142,11 +152,9 @@ class BookingService
             ]);
         }
 
-        // Update status pembayaran jika ada (misal: paid, unpaid)
         if (isset($data['payment_status'])) {
             $booking->update(['payment_status' => $data['payment_status']]);
 
-            // 🔔 Kirim Notifikasi ke Penyewa & Perental jika pembayaran lunas
             if ($data['payment_status'] === 'paid') {
                 Notification::create([
                     'user_id' => $booking->user_id,
@@ -171,7 +179,6 @@ class BookingService
 
         $loadedBooking = $booking->load(['car', 'driver.personalData', 'user']);
 
-        // 🔔 Kirim Notifikasi ke Penyewa bahwa Driver telah ditugaskan
         if ($loadedBooking->driver && $loadedBooking->driver->name) {
             Notification::create([
                 'user_id' => $booking->user_id,

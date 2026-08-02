@@ -7,13 +7,24 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['user_id', 'phone', 'birth_date', 'address', 'ktp_image'])]
+#[Fillable([
+    'user_id', 
+    'phone', 
+    'birth_date', 
+    'address', 
+    'ktp_image',
+    'sim_number',
+    'sim_type',
+    'sim_expired_date',
+    'sim_image'
+])]
 class PersonalData extends Model
 {
     protected function casts(): array
     {
         return [
-            'birth_date' => 'date', 
+            'birth_date' => 'date',
+            'sim_expired_date' => 'date', // Cast otomatis untuk tanggal kedaluwarsa SIM
         ];
     }
 
@@ -24,6 +35,4 @@ class PersonalData extends Model
     {
         return $this->belongsTo(User::class);
     }
-
-    
 }

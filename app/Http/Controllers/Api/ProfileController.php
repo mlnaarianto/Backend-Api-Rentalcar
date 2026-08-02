@@ -24,12 +24,17 @@ class ProfileController extends Controller
         $this->authorize('update', $user);
 
         $request->validate([
-            'name'       => 'sometimes|required|string|max:255', // 👈 Diubah menjadi 'sometimes' agar aman jika tidak dikirim dari Flutter
-            'phone'      => 'nullable|string|max:20',
-            'birth_date' => 'nullable|date',
-            'address'    => 'nullable|string',
-            'avatar'     => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'ktp'        => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'name'             => 'sometimes|required|string|max:255',
+            'phone'            => 'nullable|string|max:20',
+            'birth_date'       => 'nullable|date',
+            'address'          => 'nullable|string',
+            'avatar'           => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'ktp'              => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            // Validasi SIM yang wajib disertakan agar data dari Flutter / API masuk
+            'sim_number'       => 'nullable|string|max:50',
+            'sim_type'         => 'nullable|string|max:10',
+            'sim_expired_date' => 'nullable|date',
+            'sim_image'        => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
         try {

@@ -1,5 +1,13 @@
 FROM php:8.4-fpm
 
+# Argumen untuk menyamakan UID/GID dengan user di komputer host (Linux/Mac)
+ARG user=www-data
+ARG uid=1000
+ARG gid=1000
+
+# Ubah UID/GID user www-data agar sama dengan host untuk menghindari permission denied
+RUN usermod -u ${uid} www-data && groupmod -g ${gid} www-data
+
 # Install dependencies system
 RUN apt-get update && apt-get install -y \
     git \
@@ -43,8 +51,8 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www
 
-# Copy project
-COPY . .
+# Copy project dengan kepemilikan langsung ke www-data
+COPY --chown=www-data:www-data . .
 
 # Install dependency Laravel
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader

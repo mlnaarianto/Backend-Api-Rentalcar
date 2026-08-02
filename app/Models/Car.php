@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Storage;
     'driver_price_per_day', // 👈 Ditambahkan ke fillable
     'description',
     'image',
+    'video_url',
     'status'
 ])]
 #[Hidden([])]

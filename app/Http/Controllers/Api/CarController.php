@@ -66,6 +66,7 @@ class CarController extends Controller
                 'driver_price_per_day'  => 'nullable|numeric',
                 'description'           => 'nullable|string',
                 'image'                 => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'video_url'             => 'nullable|string|max:255', // 👈 Validasi link video
                 'status'                => 'nullable|in:tersedia,disewa,perbaikan',
             ]);
 
@@ -145,6 +146,7 @@ class CarController extends Controller
                 'driver_price_per_day'  => 'nullable|numeric',
                 'description'           => 'nullable|string',
                 'image'                 => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'video_url'             => 'nullable|string|max:255', // 👈 Validasi link video
                 'status'                => 'nullable|in:tersedia,disewa,perbaikan',
             ]);
 

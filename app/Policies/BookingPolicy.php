@@ -57,9 +57,9 @@ class BookingPolicy
             return false;
         }
 
-        // 2. 🛡️ Syarat Wajib: Cek apakah user sudah melengkapi Data Personal (No. HP & KTP)
+        // 2. 🛡️ Syarat Wajib: Cek apakah user sudah melengkapi Data Personal (No. HP, KTP, & SIM)
         $personalData = $user->personalData;
-        if (!$personalData || empty($personalData->phone) || empty($personalData->ktp_image)) {
+        if (!$personalData || empty($personalData->phone) || empty($personalData->ktp_image) || empty($personalData->sim_number) || empty($personalData->sim_image)) {
             return false;
         }
 
@@ -99,7 +99,6 @@ class BookingPolicy
         }
 
         // 2. Jika user adalah Perental, pastikan booking terkait mobil miliknya 
-        // (Sehingga Perental bisa klik konfirmasi COD meskipun sewa lepas kunci / tanpa driver)
         if ($user->hasRole(Role::Perental->value)) {
             return $booking->car && $booking->car->user_id === $user->id;
         }

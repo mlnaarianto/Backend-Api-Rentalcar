@@ -75,8 +75,8 @@ class BookingController extends Controller
             $user = $request->user();
             $personal = $user->personalData;
             
-            if (!$personal || empty($personal->phone) || empty($personal->ktp_image)) {
-                $message = 'Akses ditolak. Anda wajib melengkapi Data Personal (No. HP & KTP) terlebih dahulu.';
+            if (!$personal || empty($personal->phone) || empty($personal->ktp_image) || empty($personal->sim_number) || empty($personal->sim_image)) {
+                $message = 'Akses ditolak. Anda wajib melengkapi Data Personal (No. HP, KTP, dan SIM) terlebih dahulu.';
             } else {
                 $message = 'Anda tidak dapat membuat booking baru karena masih memiliki pesanan berstatus pending.';
             }

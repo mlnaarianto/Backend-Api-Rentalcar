@@ -32,13 +32,17 @@ class UserProfileService
             $user->update($userData);
         }
 
-        // 2. Update tabel personal_data (Phone, Birth Date, Address, KTP)
+        // 2. Update tabel personal_data (Phone, Birth Date, Address, KTP, & SIM)
         $personalDataPayload = [
-            'phone'      => $request->phone,
-            'birth_date' => $request->birth_date,
-            'address'    => $request->address,
+            'phone'            => $request->phone,
+            'birth_date'       => $request->birth_date,
+            'address'          => $request->address,
+            'sim_number'       => $request->sim_number,
+            'sim_type'         => $request->sim_type,
+            'sim_expired_date' => $request->sim_expired_date,
         ];
 
+        // Handle upload KTP image
         if ($request->hasFile('ktp')) {
             $personalData = $user->personalData;
             
@@ -49,6 +53,19 @@ class UserProfileService
 
             $ktpPath = $request->file('ktp')->store('ktp_images', 'public');
             $personalDataPayload['ktp_image'] = asset('storage/' . $ktpPath);
+        }
+
+        // Handle upload SIM image
+        if ($request->hasFile('sim_image')) {
+            $personalData = $user->personalData;
+            
+            if ($personalData && $personalData->sim_image) {
+                $oldSimPath = str_replace('/storage/', '', parse_url($personalData->sim_image, PHP_URL_PATH));
+                Storage::disk('public')->delete($oldSimPath);
+            }
+
+            $simPath = $request->file('sim_image')->store('sim_images', 'public');
+            $personalDataPayload['sim_image'] = asset('storage/' . $simPath);
         }
 
         $user->personalData()->updateOrCreate(
