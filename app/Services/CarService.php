@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Car;
 use App\Enums\Role;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
@@ -17,12 +16,10 @@ class CarService
     {
         $user = Auth::user();
 
-        // Jika user adalah Perental, tampilkan hanya mobil miliknya sendiri
         if ($user && $user->hasRole(Role::Perental->value)) {
-            return Car::with('user.personalData')->where('user_id', $user->id)->latest()->get();
+            return $user->cars()->with('user.personalData')->latest()->get();
         }
 
-        // Untuk Super Admin, Penyewa, atau Driver, tampilkan semua mobil
         return Car::with('user.personalData')->latest()->get();
     }
 

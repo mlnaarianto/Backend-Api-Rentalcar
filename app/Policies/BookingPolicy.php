@@ -22,7 +22,7 @@ class BookingPolicy
     }
 
     /**
-     * Menentukan apakah user bisa melihat daftar seluruh/sebagian booking.
+     * Menentukan apakah user bisa melihat daftar booking.
      */
     public function viewAny(User $user): bool
     {
@@ -36,15 +36,19 @@ class BookingPolicy
      */
     public function view(User $user, Booking $booking): bool
     {
-        if ($user->hasRole(Role::Perental->value)) {
+        // 1. Jika punya izin manage booking (Perental/Admin)
+        if ($user->hasPermissionTo(Permission::ManageBookings->value)) {
             return $booking->car && $booking->car->user_id === $user->id;
         }
 
-        if ($user->hasRole(Role::Driver->value)) {
+        // 2. Jika punya izin melihat booking yang ditugaskan (Driver)
+        if ($user->hasPermissionTo(Permission::ViewAssignedBooking->value)) {
             return $booking->driver_id === $user->id;
         }
 
-        return $booking->user_id === $user->id;
+        // 3. Jika punya izin melihat booking sendiri (Penyewa)
+        return $user->hasPermissionTo(Permission::ViewOwnBooking->value) 
+            && $booking->user_id === $user->id;
     }
 
     /**
@@ -52,18 +56,15 @@ class BookingPolicy
      */
     public function create(User $user): bool
     {
-        // 1. Cek permission dasar
         if (!$user->hasPermissionTo(Permission::CreateBooking->value)) {
             return false;
         }
 
-        // 2. 🛡️ Syarat Wajib: Cek apakah user sudah melengkapi Data Personal (No. HP, KTP, & SIM)
         $personalData = $user->personalData;
         if (!$personalData || empty($personalData->phone) || empty($personalData->ktp_image) || empty($personalData->sim_number) || empty($personalData->sim_image)) {
             return false;
         }
 
-        // 3. 🛡️ Syarat Wajib: Cegah buat booking baru jika masih ada pesanan berstatus 'pending'
         $hasPendingBooking = Booking::where('user_id', $user->id)
             ->where('status', 'pending')
             ->exists();
@@ -84,7 +85,7 @@ class BookingPolicy
             && $booking->user_id === $user->id;
     }
 
-   /**
+    /**
      * Menentukan apakah user bisa mengubah status booking atau melakukan pembayaran.
      */
     public function updateStatus(User $user, Booking $booking): bool
@@ -93,19 +94,19 @@ class BookingPolicy
             return false;
         }
 
-        // 1. Jika user adalah Penyewa, hanya boleh mengubah/membayar booking miliknya sendiri (misal: bayar QRIS)
-        if ($user->hasRole(Role::Penyewa->value)) {
-            return $booking->user_id === $user->id;
+        // 1. Perental (pemilik mobil)
+        if ($booking->car && $booking->car->user_id === $user->id) {
+            return true;
         }
 
-        // 2. Jika user adalah Perental, pastikan booking terkait mobil miliknya 
-        if ($user->hasRole(Role::Perental->value)) {
-            return $booking->car && $booking->car->user_id === $user->id;
+        // 2. Driver yang ditugaskan
+        if ($booking->driver_id === $user->id) {
+            return true;
         }
 
-        // 3. Jika user adalah Driver, pastikan dia memang ditugaskan ke booking tersebut
-        if ($user->hasRole(Role::Driver->value)) {
-            return $booking->driver_id === $user->id;
+        // 3. Penyewa (milik sendiri, misal untuk bayar QRIS)
+        if ($booking->user_id === $user->id) {
+            return true;
         }
 
         return false;

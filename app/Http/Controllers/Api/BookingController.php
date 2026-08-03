@@ -6,9 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\User;
 use App\Services\BookingService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Auth\Access\AuthorizationException;
-use Exception;
 
 class BookingController extends Controller
 {
@@ -22,34 +22,25 @@ class BookingController extends Controller
     /**
      * Tampilkan daftar booking (Bisa difilter berdasarkan role)
      */
-    public function index()
+    public function index(): JsonResponse
     {
         try {
             $this->authorize('viewAny', Booking::class);
 
             $bookings = $this->bookingService->getBookingsForUser();
 
-            return response()->json([
-                'status' => 'success',
-                'data'   => $bookings,
-            ], 200);
+            return $this->successResponse($bookings);
         } catch (AuthorizationException $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Akses ditolak: Anda tidak memiliki izin melihat daftar booking.',
-            ], 403);
-        } catch (Exception $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Gagal memuat data booking: ' . $e->getMessage(),
-            ], 500);
+            return $this->errorResponse('Akses ditolak: Anda tidak memiliki izin melihat daftar booking.', 403);
+        } catch (\Throwable $e) {
+            return $this->errorResponse('Gagal memuat data booking: ' . $e->getMessage(), 500);
         }
     }
 
     /**
      * Buat pemesanan baru (Penyewa)
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         try {
             $this->authorize('create', Booking::class);
@@ -65,66 +56,40 @@ class BookingController extends Controller
 
             $booking = $this->bookingService->createBooking($validated);
 
-            return response()->json([
-                'status'  => 'success',
-                'message' => 'Booking berhasil dibuat. Silakan lakukan pembayaran.',
-                'data'    => $booking->load(['car', 'user', 'driver.personalData']),
-            ], 201);
-            
+            return $this->successResponse(
+                $booking->load(['car', 'user', 'driver.personalData']),
+                'Booking berhasil dibuat. Silakan lakukan pembayaran.',
+                201
+            );
         } catch (AuthorizationException $e) {
-            $user = $request->user();
-            $personal = $user->personalData;
-            
-            if (!$personal || empty($personal->phone) || empty($personal->ktp_image) || empty($personal->sim_number) || empty($personal->sim_image)) {
-                $message = 'Akses ditolak. Anda wajib melengkapi Data Personal (No. HP, KTP, dan SIM) terlebih dahulu.';
-            } else {
-                $message = 'Anda tidak dapat membuat booking baru karena masih memiliki pesanan berstatus pending.';
-            }
-
-            return response()->json([
-                'status'  => 'error',
-                'message' => $message,
-            ], 403);
-            
-        } catch (Exception $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Gagal membuat booking: ' . $e->getMessage(),
-            ], 422);
+            return $this->errorResponse($this->resolveCreateDeniedMessage($request->user()), 403);
+        } catch (\Throwable $e) {
+            return $this->errorResponse('Gagal membuat booking: ' . $e->getMessage(), 422);
         }
     }
 
     /**
      * Detail spesifik booking
      */
-    public function show($id)
+    public function show($id): JsonResponse
     {
         try {
             $booking = Booking::with(['user.personalData', 'car', 'driver.personalData'])->findOrFail($id);
 
             $this->authorize('view', $booking);
 
-            return response()->json([
-                'status' => 'success',
-                'data'   => $booking,
-            ], 200);
+            return $this->successResponse($booking);
         } catch (AuthorizationException $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Akses ditolak: Anda tidak berhak melihat detail booking ini.',
-            ], 403);
-        } catch (Exception $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Booking tidak ditemukan',
-            ], 404);
+            return $this->errorResponse('Akses ditolak: Anda tidak berhak melihat detail booking ini.', 403);
+        } catch (\Throwable $e) {
+            return $this->errorResponse('Booking tidak ditemukan', 404);
         }
     }
 
     /**
      * Batalkan booking (Penyewa / Pemilik)
      */
-    public function cancel($id)
+    public function cancel($id): JsonResponse
     {
         try {
             $booking = Booking::findOrFail($id);
@@ -133,28 +98,18 @@ class BookingController extends Controller
 
             $updatedBooking = $this->bookingService->cancelBooking($booking);
 
-            return response()->json([
-                'status'  => 'success',
-                'message' => 'Booking berhasil dibatalkan.',
-                'data'    => $updatedBooking,
-            ], 200);
+            return $this->successResponse($updatedBooking, 'Booking berhasil dibatalkan.');
         } catch (AuthorizationException $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Akses ditolak: Anda tidak diizinkan membatalkan booking ini.',
-            ], 403);
-        } catch (Exception $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Gagal membatalkan booking: ' . $e->getMessage(),
-            ], 422);
+            return $this->errorResponse('Akses ditolak: Anda tidak diizinkan membatalkan booking ini.', 403);
+        } catch (\Throwable $e) {
+            return $this->errorResponse('Gagal membatalkan booking: ' . $e->getMessage(), 422);
         }
     }
 
     /**
      * Perbarui status booking / status pembayaran
      */
-    public function updateStatus(Request $request, $id)
+    public function updateStatus(Request $request, $id): JsonResponse
     {
         try {
             $booking = Booking::findOrFail($id);
@@ -168,48 +123,32 @@ class BookingController extends Controller
 
             $updatedBooking = $this->bookingService->updateBookingStatus($booking, $request->all());
 
-            return response()->json([
-                'status'  => 'success',
-                'message' => 'Status berhasil diperbarui.',
-                'data'    => $updatedBooking,
-            ], 200);
+            return $this->successResponse($updatedBooking, 'Status berhasil diperbarui.');
         } catch (AuthorizationException $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Akses ditolak: Anda tidak memiliki izin mengubah status booking.',
-            ], 403);
-        } catch (Exception $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Gagal memperbarui status: ' . $e->getMessage(),
-            ], 500);
+            return $this->errorResponse('Akses ditolak: Anda tidak memiliki izin mengubah status booking.', 403);
+        } catch (\Throwable $e) {
+            return $this->errorResponse('Gagal memperbarui status: ' . $e->getMessage(), 500);
         }
     }
 
     /**
      * Ambil daftar user yang memiliki Role 'Driver'
      */
-    public function getAvailableDrivers()
+    public function getAvailableDrivers(): JsonResponse
     {
         try {
             $drivers = User::role('Driver')->with('personalData')->get();
 
-            return response()->json([
-                'status' => 'success',
-                'data'   => $drivers,
-            ], 200);
-        } catch (Exception $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Gagal memuat daftar driver: ' . $e->getMessage(),
-            ], 500);
+            return $this->successResponse($drivers);
+        } catch (\Throwable $e) {
+            return $this->errorResponse('Gagal memuat daftar driver: ' . $e->getMessage(), 500);
         }
     }
 
     /**
      * Tugaskan / Assign Driver ke Booking tertentu
      */
-    public function assignDriver(Request $request, $id)
+    public function assignDriver(Request $request, $id): JsonResponse
     {
         try {
             $booking = Booking::findOrFail($id);
@@ -229,16 +168,45 @@ class BookingController extends Controller
 
             $updatedBooking = $this->bookingService->assignDriverToBooking($booking, $request->driver_id);
 
-            return response()->json([
-                'status'  => 'success',
-                'message' => 'Driver berhasil ditugaskan ke pemesanan ini.',
-                'data'    => $updatedBooking,
-            ], 200);
-        } catch (Exception $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Gagal menugaskan driver: ' . $e->getMessage(),
-            ], 500);
+            return $this->successResponse($updatedBooking, 'Driver berhasil ditugaskan ke pemesanan ini.');
+        } catch (\Throwable $e) {
+            return $this->errorResponse('Gagal menugaskan driver: ' . $e->getMessage(), 500);
         }
+    }
+
+    /**
+     * Tentukan pesan penolakan yang sesuai saat pembuatan booking ditolak Policy.
+     */
+    private function resolveCreateDeniedMessage(?User $user): string
+    {
+        $personal = $user?->personalData;
+
+        if (!$personal || empty($personal->phone) || empty($personal->ktp_image) || empty($personal->sim_number) || empty($personal->sim_image)) {
+            return 'Akses ditolak. Anda wajib melengkapi Data Personal (No. HP, KTP, dan SIM) terlebih dahulu.';
+        }
+
+        return 'Anda tidak dapat membuat booking baru karena masih memiliki pesanan berstatus pending.';
+    }
+
+    /**
+     * Format response sukses secara konsisten.
+     */
+    private function successResponse($data, ?string $message = null, int $code = 200): JsonResponse
+    {
+        $payload = ['status' => 'success', 'data' => $data];
+
+        if ($message) {
+            $payload['message'] = $message;
+        }
+
+        return response()->json($payload, $code);
+    }
+
+    /**
+     * Format response error secara konsisten.
+     */
+    private function errorResponse(string $message, int $code): JsonResponse
+    {
+        return response()->json(['status' => 'error', 'message' => $message], $code);
     }
 }

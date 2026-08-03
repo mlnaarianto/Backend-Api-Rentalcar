@@ -2,8 +2,6 @@
 
 namespace App\Enums;
 
-// Removed undefined RoleEnum interface import
-
 enum Role: string
 {
     case SuperAdmin = 'Super Admin';
@@ -11,31 +9,34 @@ enum Role: string
     case Penyewa = 'Penyewa';    // Customer / Penyewa Mobil
     case Driver = 'Driver';      // Sopir (jika ada jasa driver)
 
+    /**
+     * Dapatkan daftar permission yang dimiliki oleh masing-masing role.
+     */
     public function permissions(): array
     {
         return match ($this) {
-            Role::SuperAdmin => Permission::cases(), // Super Admin memegang semua hak akses
+            self::SuperAdmin => Permission::cases(), // Super Admin memegang semua hak akses
             
-            Role::Perental => [
+            self::Perental => [
                 Permission::ManageCars,
-                Permission::ViewCars,        // 👈 Ditambahkan
+                Permission::ViewCars,        
                 Permission::ManageBookings,
                 Permission::ManagePayments,
                 Permission::UpdateBookingStatus,
                 Permission::ManageProfile, 
             ],
             
-            Role::Penyewa => [
-                Permission::ViewCars,        // Untuk akses list/detail mobil
+            self::Penyewa => [
+                Permission::ViewCars,        
                 Permission::CreateBooking,
                 Permission::ViewOwnBooking,
                 Permission::CancelOwnBooking,
-                Permission::UpdateBookingStatus, // 👈 Ditambahkan agar Penyewa bisa mengubah status (membayar QRIS)
+                Permission::UpdateBookingStatus, 
                 Permission::ManageProfile, 
             ],
             
-            Role::Driver => [
-                Permission::ViewCars,        // 👈 Ditambahkan (opsional jika driver butuh lihat list mobil)
+            self::Driver => [
+                Permission::ViewCars,        
                 Permission::ViewAssignedBooking,
                 Permission::UpdateBookingStatus,
                 Permission::ManageProfile, 
@@ -43,6 +44,9 @@ enum Role: string
         };
     }
 
+    /**
+     * Ambil semua nilai string dari enum Role.
+     */
     public static function values(): array
     {
         return array_column(self::cases(), 'value');

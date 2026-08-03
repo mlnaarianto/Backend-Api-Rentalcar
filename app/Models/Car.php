@@ -47,6 +47,7 @@ class Car extends Model
     {
         return $this->belongsTo(User::class);
     }
+    
 
     /**
      * Accessor untuk menghasilkan URL lengkap gambar mobil (jika disimpan di storage).

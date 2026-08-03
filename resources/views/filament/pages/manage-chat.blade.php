@@ -66,7 +66,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        let activeChatId = null;
+        let activeChatPath = null;
         let unsubscribeMessages = null;
 
         const escapeHtml = (text) => {
@@ -85,44 +85,106 @@
             return new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(date);
         };
 
-        // 1. REALTIME LISTENER UNTUK DAFTAR INBOX
-        const chatsQuery = query(collection(db, "chats"), orderBy("updated_at", "desc"));
-        
-        onSnapshot(chatsQuery, (snapshot) => {
-            const listContainer = document.getElementById("admin-chat-list");
-            let html = "";
-
-            if (snapshot.empty) {
-                listContainer.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: #9ca3af; font-size: 14px;">Belum ada pesan masuk.</div>';
-                return;
+        // Fungsi helper untuk mengambil nama asli user dari ID atau field database
+        const resolveDisplayName = (docId, data) => {
+            // 1. Cek apakah ada field langsung di dokumen
+            if (data.customer_name) return data.customer_name;
+            if (data.name) return data.name;
+            if (data.user_name) return data.user_name;
+            if (data.last_sender_name && data.last_sender_name !== "Admin Rental") {
+                return data.last_sender_name;
             }
 
-            snapshot.forEach((docSnap) => {
-                const chatId = docSnap.id;
-                const data = docSnap.data();
-                const userName = data.name || data.user_name || 'Customer';
-                const lastMsg = data.last_message || '';
-                const isSelected = activeChatId === chatId;
+            // 2. Jika berbentuk room email (misal: room_user_kyosohma567_gmail_com)
+            if (docId.includes('room_user_')) {
+                let clean = docId.replace('room_user_', '');
+                clean = clean.replace(/_com$/, '.com');
+                // Ubah _ menjadi titik (.) kecuali bagian belakang
+                let parts = clean.split('_');
+                if (parts.length > 1) {
+                    let domain = parts.pop();
+                    let username = parts.join('.');
+                    return `${username}@${domain}`;
+                }
+                return clean;
+            }
 
-                html += `
-                    <div onclick="window.selectChatRoom('${chatId}', '${escapeHtml(userName)}')" 
-                         style="padding: 15px; cursor: pointer; border-bottom: 1px solid #f3f4f6; background: ${isSelected ? '#fef3c7' : 'transparent'}; border-left: ${isSelected ? '4px solid #d97706' : 'none'}; transition: background 0.2s;">
-                        <div style="font-weight: bold; font-size: 14px; color: #111827; margin-bottom: 4px;">
-                            ${escapeHtml(userName)}
-                        </div>
-                        <div style="font-size: 12px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            ${escapeHtml(lastMsg)}
-                        </div>
-                    </div>
-                `;
+            // 3. Jika berbentuk penugasan rental/driver (misal: room_rental_2_user_3)
+            if (docId.includes('room_rental_')) {
+                let parts = docId.split('_');
+                // Mencoba mendeteksi apakah ini chat dengan user/driver lalu memberikan label yang ramah
+                if (docId.includes('_user_')) {
+                    return `Penyewa (ID: ${parts[parts.length - 1]})`;
+                }
+                if (docId.includes('_driver_')) {
+                    return `Driver (ID: ${parts[parts.length - 1]})`;
+                }
+                return docId.replace(/_/g, ' ');
+            }
+
+            return docId;
+        };
+
+        // 1. REALTIME LISTENER UNTUK GABUNGAN 'chats' & 'store_chats'
+        async function loadAllChats() {
+            const listContainer = document.getElementById("admin-chat-list");
+            
+            const chatsRef = collection(db, "chats");
+            const storeChatsRef = collection(db, "store_chats");
+
+            onSnapshot(chatsRef, (snapshotChats) => {
+                onSnapshot(storeChatsRef, (snapshotStore) => {
+                    let allDocs = [];
+
+                    snapshotChats.forEach(docSnap => {
+                        allDocs.push({ id: docSnap.id, parent: 'chats', ...docSnap.data() });
+                    });
+
+                    snapshotStore.forEach(docSnap => {
+                        allDocs.push({ id: docSnap.id, parent: 'store_chats', ...docSnap.data() });
+                    });
+
+                    allDocs.sort((a, b) => {
+                        const timeA = a.updated_at?.toMillis ? a.updated_at.toMillis() : 0;
+                        const timeB = b.updated_at?.toMillis ? b.updated_at.toMillis() : 0;
+                        return timeB - timeA;
+                    });
+
+                    if (allDocs.length === 0) {
+                        listContainer.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: #9ca3af; font-size: 14px;">Belum ada pesan masuk.</div>';
+                        return;
+                    }
+
+                    let html = "";
+                    allDocs.forEach((data) => {
+                        const chatPath = `${data.parent}/${data.id}`;
+                        const displayName = resolveDisplayName(data.id, data);
+                        const lastMsg = data.last_message || '';
+                        const isSelected = activeChatPath === chatPath;
+
+                        html += `
+                            <div onclick="window.selectChatRoom('${chatPath}', '${escapeHtml(displayName)}')" 
+                                 style="padding: 15px; cursor: pointer; border-bottom: 1px solid #f3f4f6; background: ${isSelected ? '#fef3c7' : 'transparent'}; border-left: ${isSelected ? '4px solid #d97706' : 'none'}; transition: background 0.2s;">
+                                <div style="font-weight: bold; font-size: 14px; color: #111827; margin-bottom: 4px;">
+                                    ${escapeHtml(displayName)}
+                                </div>
+                                <div style="font-size: 12px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    ${escapeHtml(lastMsg)}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    listContainer.innerHTML = html;
+                });
             });
-            listContainer.innerHTML = html;
-        });
+        }
+
+        loadAllChats();
 
         // 2. FUNGSI PILIH ROOM & REALTIME LISTENER PESAN
-        window.selectChatRoom = function(chatId, userName) {
-            activeChatId = chatId;
-            document.getElementById("current-room-title").innerText = `${userName} (${chatId})`;
+        window.selectChatRoom = function(chatPath, displayName) {
+            activeChatPath = chatPath;
+            document.getElementById("current-room-title").innerText = `${displayName}`;
 
             const chatBox = document.getElementById("admin-chat-box");
             chatBox.innerHTML = '<div style="text-align: center; color: #9ca3af; font-size: 13px;">Memuat pesan...</div>';
@@ -131,7 +193,7 @@
                 unsubscribeMessages();
             }
 
-            const msgQuery = query(collection(db, "chats", chatId, "messages"), orderBy("created_at", "asc"));
+            const msgQuery = query(collection(db, chatPath, "messages"), orderBy("created_at", "asc"));
 
             unsubscribeMessages = onSnapshot(msgQuery, (snapshot) => {
                 chatBox.innerHTML = "";
@@ -166,9 +228,9 @@
             });
         };
 
-        // 3. FUNGSI KIRIM PESAN (Menggunakan key 'text' agar sinkron dengan Flutter)
+        // 3. FUNGSI KIRIM PESAN
         async function sendAdminMessage() {
-            if (!activeChatId) {
+            if (!activeChatPath) {
                 alert("Pilih room chat terlebih dahulu di sebelah kiri!");
                 return;
             }
@@ -177,15 +239,17 @@
             const text = input.value.trim();
             if (!text) return;
 
-            await addDoc(collection(db, "chats", activeChatId, "messages"), {
-                text: text, // 👈 Kunci field 'text' wajib sama persis dengan Flutter
+            await addDoc(collection(db, activeChatPath, "messages"), {
+                text: text,
                 sender_id: "admin",
                 sender_name: "Admin Rental",
                 created_at: serverTimestamp()
             });
 
-            await setDoc(doc(db, "chats", activeChatId), {
+            await setDoc(doc(db, activeChatPath), {
                 last_message: text,
+                last_sender_id: "admin",
+                last_sender_name: "Admin Rental",
                 updated_at: serverTimestamp()
             }, { merge: true });
 

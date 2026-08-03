@@ -8,6 +8,9 @@ enum Permission: string
     case ManageUsers = 'manage-users';
     case ManageRoles = 'manage-roles';
 
+    // Manajemen Verifikasi Perental (BARU)
+    case VerifyPerental = 'verify-perental';
+
     // Manajemen Mobil (Mobil & Katalog)
     case ManageCars = 'manage-cars'; // Untuk tambah/edit/hapus (Perental/Admin)
     case ViewCars = 'view-cars';       // Untuk melihat daftar/detail mobil (Bisa untuk Penyewa/Driver)

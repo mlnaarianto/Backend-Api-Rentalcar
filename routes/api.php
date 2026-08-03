@@ -5,7 +5,8 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\CarController;
 use App\Http\Controllers\Api\BookingController;
-use App\Http\Controllers\Api\NotificationController; // 👈 Ditambahkan agar controller terbaca
+use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\RentalApplicationController; // 👈 1. Import Controller Rental Application
 use App\Enums\Permission;
 
 /*
@@ -46,6 +47,22 @@ Route::middleware('auth:sanctum')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | Rental Application / Verifikasi Perental (BARU)
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('rental-application')->group(function () {
+        // GET /api/rental-application -> Cek status pengajuan user yang sedang login
+        Route::get('/', [RentalApplicationController::class, 'show'])
+            ->middleware('permission:' . Permission::ManageProfile->value);
+
+        // POST /api/rental-application -> Kirim atau update data pengajuan & dokumen persyaratan
+        Route::post('/', [RentalApplicationController::class, 'storeOrUpdate'])
+            ->middleware('permission:' . Permission::ManageProfile->value);
+    });
+
+
+    /*
+    |--------------------------------------------------------------------------
     | Car Management (Kombinasi Middleware Spatie Permission & Policy)
     |--------------------------------------------------------------------------
     */
@@ -76,7 +93,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Notification Management
     Route::get('/notifications', [NotificationController::class, 'index']);
-    Route::post('/notifications/read-all', [NotificationController::class, 'markAsRead']); // 👈 Tambahkan route ini
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAsRead']);
     
 
     /*
