@@ -8,17 +8,18 @@ enum Permission: string
     case ManageUsers = 'manage-users';
     case ManageRoles = 'manage-roles';
 
-    // Manajemen Verifikasi Perental (BARU)
+    // Manajemen Verifikasi Perental
     case VerifyPerental = 'verify-perental';
 
     // Manajemen Mobil (Mobil & Katalog)
     case ManageCars = 'manage-cars'; // Untuk tambah/edit/hapus (Perental/Admin)
-    case ViewCars = 'view-cars';       // Untuk melihat daftar/detail mobil (Bisa untuk Penyewa/Driver)
+    case ViewCars = 'view-cars';     // Untuk melihat daftar/detail mobil (Bisa untuk Penyewa/Driver)
 
     // Manajemen Booking & Pembayaran
-    case ManageBookings = 'manage-bookings';
+    case ManageBookings = 'manage-bookings';           // Perental: kelola booking untuk mobil miliknya
+    case ManageAllBookings = 'manage-all-bookings';     // 👈 BARU: admin-level, lihat & kelola SEMUA booking lintas Perental
     case ManagePayments = 'manage-payments';
-    
+
     // Hak akses untuk Penyewa & Pengguna
     case CreateBooking = 'create-booking';
     case ViewOwnBooking = 'view-own-booking';
@@ -27,7 +28,7 @@ enum Permission: string
 
     // Hak akses untuk Driver / Perental
     case ViewAssignedBooking = 'view-assigned-booking';
-    case UpdateBookingStatus = 'update-booking-status';
+    case UpdateBookingStatus = 'update-booking-status'; // Hanya Perental & Driver (bukan Penyewa)
 
     public static function values(): array
     {

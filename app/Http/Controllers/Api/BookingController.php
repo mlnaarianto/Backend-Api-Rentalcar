@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\User;
 use App\Services\BookingService;
+use App\Services\PaymentGatewayService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -13,14 +14,17 @@ use Illuminate\Auth\Access\AuthorizationException;
 class BookingController extends Controller
 {
     protected BookingService $bookingService;
+    protected PaymentGatewayService $paymentService;
 
-    public function __construct(BookingService $bookingService)
+    public function __construct(BookingService $bookingService, PaymentGatewayService $paymentService)
     {
         $this->bookingService = $bookingService;
+        $this->paymentService = $paymentService;
     }
 
     /**
      * Tampilkan daftar booking (Bisa difilter berdasarkan role)
+     * -> Dipakai halaman "Kelola Booking" (Perental/Driver/Admin)
      */
     public function index(): JsonResponse
     {
@@ -34,6 +38,26 @@ class BookingController extends Controller
             return $this->errorResponse('Akses ditolak: Anda tidak memiliki izin melihat daftar booking.', 403);
         } catch (\Throwable $e) {
             return $this->errorResponse('Gagal memuat data booking: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Riwayat pemesanan milik SAYA sendiri sebagai penyewa (halaman
+     * "Riwayat Pemesanan" di Flutter). Selalu scoped ke user_id user yang
+     * login, apapun role/permission yang dia punya — termasuk kalau dia
+     * seorang Perental atau Driver yang juga pernah menyewa mobil orang
+     * lain. Tidak butuh policy authorize() karena query di service sudah
+     * otomatis terkunci ke Auth::id(), jadi mustahil menampilkan booking
+     * milik user lain.
+     */
+    public function myHistory(): JsonResponse
+    {
+        try {
+            $bookings = $this->bookingService->getMyRentalHistory();
+
+            return $this->successResponse($bookings);
+        } catch (\Throwable $e) {
+            return $this->errorResponse('Gagal memuat riwayat booking: ' . $e->getMessage(), 500);
         }
     }
 
@@ -171,6 +195,41 @@ class BookingController extends Controller
             return $this->successResponse($updatedBooking, 'Driver berhasil ditugaskan ke pemesanan ini.');
         } catch (\Throwable $e) {
             return $this->errorResponse('Gagal menugaskan driver: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Cek status pembayaran QRIS ke Midtrans (Polling Manual)
+     */
+    public function checkPayment($id): JsonResponse
+    {
+        try {
+            $booking = Booking::findOrFail($id);
+
+            $this->authorize('view', $booking);
+
+            if (!$booking->midtrans_order_id) {
+                return $this->errorResponse('Booking ini tidak menggunakan metode pembayaran QRIS.', 400);
+            }
+
+            $status = $this->paymentService->checkTransactionStatus($booking->midtrans_order_id);
+
+            $transactionStatus = $status['transaction_status'] ?? null;
+
+            if (in_array($transactionStatus, ['settlement', 'capture'], true)) {
+                $booking->update(['payment_status' => 'paid']);
+            } elseif (in_array($transactionStatus, ['expire', 'cancel', 'deny'], true)) {
+                $booking->update(['payment_status' => 'unpaid']);
+            }
+
+            return $this->successResponse(
+                $booking->fresh(['car', 'driver.personalData', 'user']),
+                'Status pembayaran berhasil diperiksa.'
+            );
+        } catch (AuthorizationException $e) {
+            return $this->errorResponse('Akses ditolak: Anda tidak berhak memeriksa pembayaran booking ini.', 403);
+        } catch (\Throwable $e) {
+            return $this->errorResponse('Gagal mengecek status pembayaran: ' . $e->getMessage(), 500);
         }
     }
 

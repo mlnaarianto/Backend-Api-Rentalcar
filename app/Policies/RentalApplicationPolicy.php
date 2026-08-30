@@ -22,8 +22,8 @@ class RentalApplicationPolicy
     public function view(User $user, RentalApplication $rentalApplication): bool
     {
         // Pemilik data sendiri boleh melihat, atau admin yang punya izin verifikasi
-        return $user->id === $rentalApplication->user_id 
-            || $user->hasRole('Super Admin') 
+        return $user->id === $rentalApplication->user_id
+            || $user->hasRole('Super Admin')
             || $user->hasPermissionTo(Permission::VerifyPerental->value);
     }
 

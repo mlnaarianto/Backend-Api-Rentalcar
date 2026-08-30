@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Car;
 use App\Models\Notification;
 use App\Enums\Permission;
+use App\Services\PaymentGatewayService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -17,20 +18,29 @@ class BookingService
     private const DEFAULT_RELATIONS = ['user.personalData', 'car.user', 'driver.personalData'];
 
     /**
-     * Ambil daftar booking berdasarkan Permission user yang sedang login
+     * Ambil daftar booking berdasarkan Permission user yang sedang login.
+     * Ini untuk halaman "Kelola Booking" (sudut pandang Perental/Driver/Admin) —
+     * murni permission-based, tidak ada hasRole() atau heuristik apapun.
+     *
+     * 👉 CATATAN: method ini BUKAN untuk "riwayat sewa saya sendiri". Perental
+     * yang juga menyewa mobil orang lain TIDAK akan melihat riwayat sewanya
+     * sendiri di sini, karena scope-nya adalah booking untuk mobil yang dia
+     * KELOLA, bukan booking di mana dia berperan sebagai penyewa.
+     * Untuk itu pakai getMyRentalHistory().
      */
     public function getBookingsForUser(): Collection
     {
         $user = Auth::user();
 
-        // Super Admin murni (tanpa mobil terikat, bukan Perental) → ambil semua booking
-        if ($user->hasPermissionTo(Permission::ManageBookings->value)
-            && !$user->cars()->exists()
-            && !$user->hasRole('Perental')) {
+        // Siapapun yang diberi permission 'manage-all-bookings' (lewat seeder,
+        // biasanya cuma role Super Admin) lihat SEMUA booking di sistem.
+        if ($user->hasPermissionTo(Permission::ManageAllBookings->value)) {
             return Booking::with(self::DEFAULT_RELATIONS)->latest()->get();
         }
 
-        // Perental (memiliki mobil yang dikelola) → hanya booking untuk mobil miliknya
+        // Perental (memiliki mobil yang dikelola) → hanya booking untuk mobil miliknya.
+        // Kalau belum punya mobil sama sekali, whereHas() otomatis mengembalikan
+        // koleksi kosong — tidak pernah "jatuh" ke akses semua data.
         if ($user->hasPermissionTo(Permission::ManageBookings->value)) {
             return Booking::with(self::DEFAULT_RELATIONS)
                 ->whereHas('car', fn ($query) => $query->where('user_id', $user->id))
@@ -48,6 +58,24 @@ class BookingService
 
         // Default: Penyewa → hanya booking miliknya sendiri
         return $user->bookings()->with(self::DEFAULT_RELATIONS)->latest()->get();
+    }
+
+    /**
+     * Riwayat pemesanan SAYA sebagai penyewa (halaman "Riwayat Pemesanan" di Flutter).
+     *
+     * Selalu di-scope ke user_id = user yang login, TIDAK PEDULI role atau
+     * permission apapun yang dia punya (Perental/Driver/Admin sekalipun).
+     * Ini murni "riwayat rental yang pernah saya buat", bukan "booking yang
+     * saya kelola". Kalau user itu belum pernah menyewa mobil apapun (mis.
+     * Perental murni yang tidak pernah jadi penyewa), hasilnya otomatis
+     * koleksi kosong — bukan data orang lain.
+     */
+    public function getMyRentalHistory(): Collection
+    {
+        return Booking::with(self::DEFAULT_RELATIONS)
+            ->where('user_id', Auth::id())
+            ->latest()
+            ->get();
     }
 
     /**
@@ -99,6 +127,11 @@ class BookingService
             'payment_method'     => $data['payment_method'],
             'notes'              => $data['notes'] ?? null,
         ]);
+
+        // Generate QRIS lewat Midtrans kalau metode bayar adalah QRIS
+        if ($data['payment_method'] === 'qris') {
+            $booking = app(PaymentGatewayService::class)->createQrisTransaction($booking);
+        }
 
         $this->notifyIfOwnerExists($car, function () use ($car, $data) {
             return [
@@ -199,7 +232,7 @@ class BookingService
     }
 
     /**
-     * Kirim notifikasi ke pemilik mobil jika ada (helper kecil untuk hindari duplikasi null-check).
+     * Kirim notifikasi ke pemilik mobil jika ada.
      */
     private function notifyIfOwnerExists(Car $car, callable $payloadResolver): void
     {

@@ -21,7 +21,10 @@ use Illuminate\Database\Eloquent\Model;
     'total_price',
     'status',
     'payment_status',
-    'payment_method', // 👈 Ditambahkan ke fillable
+    'payment_method',
+    'midtrans_order_id',   // 👈 Ditambahkan
+    'qris_url',            // 👈 Ditambahkan
+    'payment_expired_at',  // 👈 Ditambahkan
     'notes'
 ])]
 #[Hidden([])]
@@ -43,6 +46,7 @@ class Booking extends Model
             'with_driver' => 'boolean',
             'start_date' => 'date',
             'end_date' => 'date',
+            'payment_expired_at' => 'datetime', // 👈 Ditambahkan
         ];
     }
 
