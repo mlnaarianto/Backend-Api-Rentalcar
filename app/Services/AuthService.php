@@ -42,7 +42,7 @@ class AuthService
 
         $token = $user->createToken('web-token')->plainTextToken;
 
-        return 'http://localhost:3000/auth/callback?token=' . $token;
+        return 'http://localhost:3000/dashboard?token=' . $token;
     }
 
     /**
