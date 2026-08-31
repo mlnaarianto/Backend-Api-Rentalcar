@@ -18,13 +18,13 @@ class UserProfileService
         }
 
         if ($request->hasFile('avatar')) {
-            if ($user->avatar && !str_starts_with($user->avatar, 'http')) {
-                $oldPath = str_replace('/storage/', '', parse_url($user->avatar, PHP_URL_PATH));
-                Storage::disk('public')->delete($oldPath);
+            // Hapus avatar lama kalau ada (sekarang tinggal path relatif, tidak perlu parse URL lagi)
+            if ($user->avatar) {
+                Storage::disk('public')->delete($user->avatar);
             }
 
-            $avatarPath = $request->file('avatar')->store('avatars', 'public');
-            $userData['avatar'] = asset('storage/' . $avatarPath);
+            // Simpan PATH RELATIF saja, bukan full URL — accessor di model yang urus generate URL-nya
+            $userData['avatar'] = $request->file('avatar')->store('avatars', 'public');
         }
 
         // Hanya jalankan query update jika ada data user yang berubah
@@ -42,30 +42,25 @@ class UserProfileService
             'sim_expired_date' => $request->sim_expired_date,
         ];
 
+        $personalData = $user->personalData;
+
         // Handle upload KTP image
         if ($request->hasFile('ktp')) {
-            $personalData = $user->personalData;
-            
             if ($personalData && $personalData->ktp_image) {
-                $oldKtpPath = str_replace('/storage/', '', parse_url($personalData->ktp_image, PHP_URL_PATH));
-                Storage::disk('public')->delete($oldKtpPath);
+                Storage::disk('public')->delete($personalData->ktp_image);
             }
 
-            $ktpPath = $request->file('ktp')->store('ktp_images', 'public');
-            $personalDataPayload['ktp_image'] = asset('storage/' . $ktpPath);
+            // Simpan path relatif aja, misal: "ktp_images/xxxx.jpg"
+            $personalDataPayload['ktp_image'] = $request->file('ktp')->store('ktp_images', 'public');
         }
 
         // Handle upload SIM image
         if ($request->hasFile('sim_image')) {
-            $personalData = $user->personalData;
-            
             if ($personalData && $personalData->sim_image) {
-                $oldSimPath = str_replace('/storage/', '', parse_url($personalData->sim_image, PHP_URL_PATH));
-                Storage::disk('public')->delete($oldSimPath);
+                Storage::disk('public')->delete($personalData->sim_image);
             }
 
-            $simPath = $request->file('sim_image')->store('sim_images', 'public');
-            $personalDataPayload['sim_image'] = asset('storage/' . $simPath);
+            $personalDataPayload['sim_image'] = $request->file('sim_image')->store('sim_images', 'public');
         }
 
         $user->personalData()->updateOrCreate(

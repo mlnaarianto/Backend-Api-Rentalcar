@@ -14,6 +14,7 @@ enum Permission: string
     // Manajemen Mobil (Mobil & Katalog)
     case ManageCars = 'manage-cars'; // Untuk tambah/edit/hapus (Perental/Admin)
     case ViewCars = 'view-cars';     // Untuk melihat daftar/detail mobil (Bisa untuk Penyewa/Driver)
+    case ViewAllCars = 'view-all-cars'; // Bisa melihat semua mobil dari semua perental
 
     // Manajemen Booking & Pembayaran
     case ManageBookings = 'manage-bookings';           // Perental: kelola booking untuk mobil miliknya

@@ -19,6 +19,9 @@ return [
         'api/*',
         'sanctum/csrf-cookie',
         'auth/*',
+        'broadcasting/*', // 👈 WAJIB ADA — tanpa ini, POST /broadcasting/auth
+                           // dari FE diblokir CORS dan channel privat Reverb
+                           // gak akan pernah ke-subscribe.
         'login',
         'logout',
         'register',
@@ -27,11 +30,11 @@ return [
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:5173', // Tambahkan ini
-    'http://127.0.0.1:5173', // Tambahkan ini
-],
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+    ],
 
     'allowed_origins_patterns' => [],
 

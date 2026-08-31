@@ -16,10 +16,18 @@ class CarService
     {
         $user = Auth::user();
 
-        if ($user && $user->hasRole(Role::Perental->value)) {
+        // Cek apakah user punya hak akses melihat semua mobil secara global
+        // (Misalnya Super Admin atau user yang dibekali permission view-all-cars)
+        if ($user && ($user->hasRole('Super Admin') || $user->can('view-all-cars'))) {
+            return Car::with('user.personalData')->latest()->get();
+        }
+
+        // Jika perental biasa, hanya tampilkan mobil miliknya sendiri
+        if ($user && $user->hasRole('Perental')) {
             return $user->cars()->with('user.personalData')->latest()->get();
         }
 
+        // Default untuk penyewa/driver atau umum (menampilkan semua mobil yang tersedia untuk disewa)
         return Car::with('user.personalData')->latest()->get();
     }
 
