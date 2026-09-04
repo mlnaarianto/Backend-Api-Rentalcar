@@ -31,7 +31,7 @@
             <!-- Foto SIM -->
             <div class="border p-3 rounded-lg bg-gray-50">
                 <p class="font-semibold text-sm text-gray-700 mb-2">
-                    Foto SIM / Dokumen Pendukung (No: {{ $personalData->identity_number ?? '-' }}):
+                    Foto SIM / Dokumen Pendukung (No: {{ $personalData->sim_number ?? '-' }}):
                 </p>
                 @if($personalData->driver_license_image ?? $personalData->sim_image ?? false)
                     @php

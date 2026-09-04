@@ -18,6 +18,14 @@ class RentalApplication extends Model
         'business_address',
         'status',
         'admin_notes',
+        'latitude',
+        'longitude',
+        'formatted_address',
+    ];
+
+    protected $casts = [
+        'latitude' => 'decimal:7',
+        'longitude' => 'decimal:7',
     ];
 
     public function user(): BelongsTo

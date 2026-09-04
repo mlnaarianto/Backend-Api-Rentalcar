@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 #[Fillable([
     'user_id',
@@ -18,11 +19,11 @@ use Illuminate\Support\Facades\Storage;
     'seats',
     'year',
     'price_per_day',
-    'driver_price_per_day', // 👈 Ditambahkan ke fillable
+    'driver_price_per_day',
     'description',
     'image',
     'video_url',
-    'status'
+    'status',
 ])]
 #[Hidden([])]
 class Car extends Model
@@ -33,7 +34,7 @@ class Car extends Model
     {
         return [
             'price_per_day' => 'decimal:2',
-            'driver_price_per_day' => 'decimal:2', // 👈 Ditambahkan cast decimal:2
+            'driver_price_per_day' => 'decimal:2',
             'year' => 'integer',
             'seats' => 'integer',
             'user_id' => 'integer',
@@ -47,15 +48,45 @@ class Car extends Model
     {
         return $this->belongsTo(User::class);
     }
-    
 
     /**
-     * Accessor untuk menghasilkan URL lengkap gambar mobil (jika disimpan di storage).
+     * Accessor URL lengkap gambar mobil dengan Dynamic Host Detection.
+     * - Jika diakses via Filament/Admin (browser laptop), menyesuaikan host aktif.
+     * - Jika diakses via API/Flutter, menggunakan IP lokal server agar HP fisik terbaca.
      */
-    protected function image(): \Illuminate\Database\Eloquent\Casts\Attribute
+    protected function image(): Attribute
     {
-        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
-            get: fn ($value) => $value ? (filter_var($value, FILTER_VALIDATE_URL) ? $value : Storage::url($value)) : null,
+        return Attribute::make(
+            get: function ($value) {
+                if (!$value) {
+                    return null;
+                }
+
+                // Jika sudah berupa URL lengkap, kembalikan langsung
+                if (filter_var($value, FILTER_VALIDATE_URL)) {
+                    return $value;
+                }
+
+                // IP khusus untuk akses publik / Flutter di HP fisik
+                $baseUrl = 'http://192.168.189.4:8000';
+
+                // Jika request berasal dari panel Filament / Admin di browser
+                if (request()->is('admin*') || request()->is('filament*')) {
+                    return Storage::url($value);
+                }
+
+                // Untuk kebutuhan API / Flutter
+                return $baseUrl . Storage::url($value);
+            }
         );
+    }
+
+    /**
+     * Helper ambil path RAW (bukan full URL) dari kolom image.
+     * Dipakai internal di Filament EditCar supaya FileUpload tidak error.
+     */
+    public function getRawImagePath(): ?string
+    {
+        return $this->getRawOriginal('image');
     }
 }

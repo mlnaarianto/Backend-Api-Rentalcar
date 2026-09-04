@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\RentalApplication;
 use App\Models\User;
 use App\Enums\Permission;
+use App\Enums\Role;
 
 class RentalApplicationPolicy
 {
@@ -13,7 +14,7 @@ class RentalApplicationPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasRole('Super Admin') || $user->hasPermissionTo(Permission::VerifyPerental->value);
+        return $user->hasRole(Role::SuperAdmin->value) || $user->hasPermissionTo(Permission::VerifyPerental->value);
     }
 
     /**
@@ -23,7 +24,7 @@ class RentalApplicationPolicy
     {
         // Pemilik data sendiri boleh melihat, atau admin yang punya izin verifikasi
         return $user->id === $rentalApplication->user_id
-            || $user->hasRole('Super Admin')
+            || $user->hasRole(Role::SuperAdmin->value)
             || $user->hasPermissionTo(Permission::VerifyPerental->value);
     }
 
@@ -40,6 +41,6 @@ class RentalApplicationPolicy
      */
     public function verify(User $user): bool
     {
-        return $user->hasRole('Super Admin') || $user->hasPermissionTo(Permission::VerifyPerental->value);
+        return $user->hasRole(Role::SuperAdmin->value) || $user->hasPermissionTo(Permission::VerifyPerental->value);
     }
 }

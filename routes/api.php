@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\CarController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\RentalApplicationController;
+// use App\Http\Controllers\Api\AdminRentalApplicationController; // ✅ tambahkan import di paling atas file
 use App\Enums\Permission;
 
 /*
@@ -16,16 +17,19 @@ use App\Enums\Permission;
 */
 
 Route::prefix('auth')->group(function () {
-    // Web: Redirect ke Google
-    Route::get('/google', [AuthController::class, 'redirectToGoogle'])->name('google.login');
-    // Web: Callback dari Google
-    Route::get('/google/callback', [AuthController::class, 'handleGoogleCallback'])->name('google.callback');
+    // Web: Redirect & Callback Google OAuth dipindah ke routes/web.php
+    // (sudah ditangani di sana, jangan didaftarkan lagi di sini supaya
+    // tidak ada dua route yang bentrok untuk path yang sama).
 
     // Mobile: Verifikasi token Google dari Flutter
     Route::post('/google/mobile', [AuthController::class, 'handleMobileGoogleLogin']);
 
     // Manual: Login email + password
-    Route::post('/login', [AuthController::class, 'handleManualLogin']);
+    // NONAKTIF: login manual khusus Admin/sistem sudah digantikan oleh
+    // panel Filament (punya auth sendiri). Method controller-nya juga
+    // sudah dikomentari di AuthController & AuthService — jangan
+    // diaktifkan lagi tanpa membuka comment di kedua file itu juga.
+    // Route::post('/login', [AuthController::class, 'handleManualLogin']);
 });
 
 
@@ -90,6 +94,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [RentalApplicationController::class, 'show'])
             ->middleware('permission:' . Permission::ManageProfile->value);
 
+        // GET /api/rental-application/reverse-geocode -> Auto-fill alamat dari klik peta
+        Route::get('/reverse-geocode', [RentalApplicationController::class, 'reverseGeocode'])
+            ->middleware('permission:' . Permission::ManageProfile->value);
+
         // POST /api/rental-application -> Kirim atau update data pengajuan & dokumen persyaratan
         Route::post('/', [RentalApplicationController::class, 'storeOrUpdate'])
             ->middleware('permission:' . Permission::ManageProfile->value);
@@ -143,7 +151,7 @@ Route::middleware('auth:sanctum')->group(function () {
             . Permission::ManageAllBookings->value . '|'
             . Permission::ManageBookings->value);
 
-   Route::prefix('bookings')->group(function () {
+    Route::prefix('bookings')->group(function () {
 
         // GET /api/bookings/my-history -> Riwayat pemesanan MILIK SENDIRI sebagai
         // penyewa. Selalu scoped ke user_id user yang login, apapun role atau
@@ -201,4 +209,26 @@ Route::middleware('auth:sanctum')->group(function () {
                 . Permission::ManageAllBookings->value . '|'
                 . Permission::ManageBookings->value);
     });
+
+    /*
+    |--------------------------------------------------------------------------
+    | [ADMIN] Rental Application / Verifikasi Perental
+    |--------------------------------------------------------------------------
+    | NONAKTIF: dulu disiapkan sebagai cadangan kalau ada admin panel React
+    | terpisah dari Filament. Sekarang approval perental sudah sepenuhnya
+    | ditangani lewat Filament, jadi seluruh blok endpoint ini dikomentari
+    | total (bukan dihapus) supaya gampang diaktifkan lagi kalau suatu saat
+    | dibutuhkan.
+    |--------------------------------------------------------------------------
+    */
+    // Route::prefix('admin/rental-applications')->group(function () {
+    //     Route::get('/', [AdminRentalApplicationController::class, 'index'])
+    //         ->middleware('permission:' . Permission::VerifyPerental->value);
+
+    //     Route::get('/{id}', [AdminRentalApplicationController::class, 'show'])
+    //         ->middleware('permission:' . Permission::VerifyPerental->value);
+
+    //     Route::patch('/{id}/verify', [AdminRentalApplicationController::class, 'verify'])
+    //         ->middleware('permission:' . Permission::VerifyPerental->value);
+    // });
 });

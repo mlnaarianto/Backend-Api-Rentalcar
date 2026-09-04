@@ -54,9 +54,9 @@ services:
     # --host=0.0.0.0 wajib supaya bisa diakses dari luar container
     # (default Reverb bind ke 127.0.0.1, cuma bisa diakses dari
     # dalam container itu sendiri)
-    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    command: php artisan reverb:start --host=0.0.0.0 --port=9090
     ports:
-      - "8080:8080"
+      - "9090:9090"
     mem_limit: 256m
     cpus: 0.25
 

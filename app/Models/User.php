@@ -45,4 +45,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(Booking::class);
     }
+
+    /**
+     * Relasi ke pengajuan perental (Rental Application) milik user ini
+     */
+    public function rentalApplication(): HasOne
+    {
+        return $this->hasOne(RentalApplication::class);
+    }
 }

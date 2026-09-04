@@ -73,7 +73,10 @@ class PersonalDataForm
 
                                     TextInput::make('sim_expired_date')
                                         ->label('Masa Berlaku SIM')
-                                        ->disabled(),
+                                        ->disabled()
+                                        ->formatStateUsing(fn ($state) => $state
+                                            ? \Carbon\Carbon::parse($state)->translatedFormat('d F Y')
+                                            : '-'),
                                 ]),
                         ])
                         ->columns(1),

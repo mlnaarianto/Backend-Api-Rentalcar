@@ -54,10 +54,7 @@ class CarService
     public function updateCar(Car $car, array $data, ?object $imageFile = null): Car
     {
         if ($imageFile) {
-            if ($car->image && !filter_var($car->image, FILTER_VALIDATE_URL)) {
-                $oldPath = str_replace('/storage/', '', $car->image);
-                Storage::disk('public')->delete($oldPath);
-            }
+            $this->deleteImageFile($car);
 
             $data['image'] = $imageFile->store('cars', 'public');
         }
@@ -71,11 +68,37 @@ class CarService
      */
     public function deleteCar(Car $car): bool
     {
-        if ($car->image && !filter_var($car->image, FILTER_VALIDATE_URL)) {
-            $oldPath = str_replace('/storage/', '', $car->image);
-            Storage::disk('public')->delete($oldPath);
-        }
+        $this->deleteImageFile($car);
 
         return $car->delete();
+    }
+
+    /**
+     * Hapus file foto mobil dari disk (jika ada & bukan URL eksternal).
+     *
+     * FIX: sebelumnya kode ini mengecek $car->image (hasil ACCESSOR, yang
+     * sudah diubah jadi full URL oleh Model::image()). Akibatnya
+     * filter_var($car->image, FILTER_VALIDATE_URL) hampir selalu TRUE,
+     * jadi file lama nggak pernah kehapus dari storage (jadi sampah).
+     *
+     * Sekarang pakai getRawOriginal('image') -> path asli di DB
+     * (mis. "cars/abc123.jpg"), bukan full URL.
+     */
+    protected function deleteImageFile(Car $car): void
+    {
+        $rawPath = $car->getRawOriginal('image');
+
+        if (! $rawPath) {
+            return;
+        }
+
+        // Kalau raw value ternyata URL eksternal (bukan path lokal), jangan dihapus.
+        if (filter_var($rawPath, FILTER_VALIDATE_URL)) {
+            return;
+        }
+
+        if (Storage::disk('public')->exists($rawPath)) {
+            Storage::disk('public')->delete($rawPath);
+        }
     }
 }

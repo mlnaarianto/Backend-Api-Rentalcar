@@ -4,15 +4,17 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
-use App\Models\User;                    // ✅ Tambahkan import model User
-use App\Models\Car;                     // ✅ Tambahkan import model Car
-use App\Models\Booking;                 // ✅ Tambahkan import model Booking
-use App\Models\Notification;            // ✅ Tambahkan import model Notification
-use App\Enums\Role;                     // ✅ Tambahkan import Enum Role
-use App\Policies\UserProfilePolicy;     // ✅ Tambahkan import Policy User
-use App\Policies\CarPolicy;             // ✅ Tambahkan import Policy Car
-use App\Policies\BookingPolicy;         // ✅ Tambahkan import Policy Booking
-use App\Observers\NotificationObserver; // ✅ Tambahkan import Observer Notification
+use App\Models\User;                              // ✅ Import model User
+use App\Models\Car;                               // ✅ Import model Car
+use App\Models\Booking;                           // ✅ Import model Booking
+use App\Models\Notification;                      // ✅ Import model Notification
+use App\Models\RentalApplication;                 // ✅ Import model RentalApplication
+use App\Enums\Role;                               // ✅ Import Enum Role
+use App\Policies\UserProfilePolicy;               // ✅ Import Policy User
+use App\Policies\CarPolicy;                       // ✅ Import Policy Car
+use App\Policies\BookingPolicy;                   // ✅ Import Policy Booking
+use App\Policies\RentalApplicationPolicy;         // ✅ Import Policy RentalApplication
+use App\Observers\NotificationObserver;           // ✅ Import Observer Notification
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -36,7 +38,8 @@ class AppServiceProvider extends ServiceProvider
         // ✅ Daftarkan Policy di sini tanpa hardcode string role
         Gate::policy(User::class, UserProfilePolicy::class);
         Gate::policy(Car::class, CarPolicy::class);
-        Gate::policy(Booking::class, BookingPolicy::class); // 👈 Daftarkan Policy Booking
+        Gate::policy(Booking::class, BookingPolicy::class);
+        Gate::policy(RentalApplication::class, RentalApplicationPolicy::class); // 👈 Daftarkan Policy RentalApplication
 
         // 🔴 Daftarkan Observer Notification — supaya setiap kali
         // Notification::create() dipanggil di manapun (BookingService,

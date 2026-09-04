@@ -71,7 +71,7 @@ class CarController extends Controller
             ]);
 
             $data = $request->except('image');
-            $data['user_id'] = Auth::id(); 
+            $data['user_id'] = Auth::id();
 
             $car = $this->carService->createCar(
                 $data,
@@ -83,7 +83,6 @@ class CarController extends Controller
                 'message' => 'Mobil berhasil ditambahkan',
                 'data'    => $car,
             ], 201);
-
         } catch (AuthorizationException $e) {
             return response()->json([
                 'status'  => 'error',
@@ -97,14 +96,19 @@ class CarController extends Controller
         }
     }
 
-   /**
+    /**
      * Detail spesifik mobil
      */
     public function show($id)
     {
         try {
-            $car = Car::with('user.personalData')->findOrFail($id);
-            
+            $car = Car::with([
+                'user.personalData',
+                'user.rentalApplication' => function ($query) {
+                    $query->where('status', 'approved');
+                },
+            ])->findOrFail($id);
+
             $this->authorize('view', $car);
 
             return response()->json([

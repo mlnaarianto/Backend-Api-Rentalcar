@@ -67,7 +67,7 @@ class AuthController extends Controller
         } catch (Exception $e) {
             Log::error('Google Mobile Auth Error: ' . $e->getMessage());
             $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 401;
-            
+
             return response()->json([
                 'status'  => 'error',
                 'message' => 'Autentikasi gagal: ' . $e->getMessage()
@@ -79,38 +79,44 @@ class AuthController extends Controller
      * ========================================================
      * 3. LOGIN MANUAL (Email & Password — Khusus Sistem/Admin)
      * ========================================================
+     *
+     * NONAKTIF: Endpoint ini sudah tidak dipakai karena login untuk
+     * Admin/sistem kini ditangani oleh panel Filament (auth bawaan
+     * Filament sendiri) bukan untuk client frontend lainnya. Dikomentari total (bukan dihapus) supaya
+     * mudah diaktifkan kembali kalau dibutuhkan di masa depan.
+     * Jangan lupa komentari juga rute-nya di routes/api.php.
      */
-    public function handleManualLogin(Request $request)
-    {
-        $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required|string|min:6',
-        ]);
+    // public function handleManualLogin(Request $request)
+    // {
+    //     $request->validate([
+    //         'email'    => 'required|email',
+    //         'password' => 'required|string|min:6',
+    //     ]);
 
-        try {
-            $result = $this->authService->handleManualLogin([
-                'email'    => $request->email,
-                'password' => $request->password,
-            ]);
+    //     try {
+    //         $result = $this->authService->handleManualLogin([
+    //             'email'    => $request->email,
+    //             'password' => $request->password,
+    //         ]);
 
-            return response()->json([
-                'status'       => 'success',
-                'message'      => 'Login berhasil',
-                'access_token' => $result['access_token'],
-                'token_type'   => $result['token_type'],
-                'user'         => $result['user'],
-            ], 200);
-        } catch (Exception $e) {
-            Log::error('Manual Login Error: ' . $e->getMessage());
-            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
-            $message = $statusCode === 500 ? 'Terjadi kesalahan server. Coba beberapa saat lagi.' : $e->getMessage();
+    //         return response()->json([
+    //             'status'       => 'success',
+    //             'message'      => 'Login berhasil',
+    //             'access_token' => $result['access_token'],
+    //             'token_type'   => $result['token_type'],
+    //             'user'         => $result['user'],
+    //         ], 200);
+    //     } catch (Exception $e) {
+    //         Log::error('Manual Login Error: ' . $e->getMessage());
+    //         $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+    //         $message = $statusCode === 500 ? 'Terjadi kesalahan server. Coba beberapa saat lagi.' : $e->getMessage();
 
-            return response()->json([
-                'status'  => 'error',
-                'message' => $message,
-            ], $statusCode);
-        }
-    }
+    //         return response()->json([
+    //             'status'  => 'error',
+    //             'message' => $message,
+    //         ], $statusCode);
+    //     }
+    // }
 
     /**
      * ========================================================

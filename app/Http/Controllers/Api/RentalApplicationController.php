@@ -11,7 +11,6 @@ class RentalApplicationController extends Controller
 {
     protected $rentalService;
 
-    // Inject Service melalui Constructor
     public function __construct(RentalApplicationService $rentalService)
     {
         $this->rentalService = $rentalService;
@@ -34,7 +33,6 @@ class RentalApplicationController extends Controller
             ], 200);
         }
 
-        // Jalankan policy 'view' untuk memastikan user berhak melihat data ini
         $this->authorize('view', $application);
 
         return response()->json([
@@ -45,25 +43,58 @@ class RentalApplicationController extends Controller
     }
 
     /**
+     * Endpoint GET: Reverse geocode koordinat -> alamat.
+     * Dipanggil client tiap kali user klik/pindah marker di peta, untuk auto-fill alamat.
+     */
+    public function reverseGeocode(Request $request)
+    {
+        $validated = $request->validate([
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+        ], [
+            'latitude.required' => 'Koordinat latitude wajib diisi.',
+            'longitude.required' => 'Koordinat longitude wajib diisi.',
+        ]);
+
+        $address = $this->rentalService->reverseGeocode(
+            (float) $validated['latitude'],
+            (float) $validated['longitude']
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $address ? 'Alamat ditemukan.' : 'Alamat tidak ditemukan, silakan isi manual.',
+            'data' => [
+                'latitude' => (float) $validated['latitude'],
+                'longitude' => (float) $validated['longitude'],
+                'formatted_address' => $address,
+            ],
+        ], 200);
+    }
+
+    /**
      * Endpoint POST: Kirim atau update pengajuan
      */
     public function storeOrUpdate(Request $request)
     {
-        // Validasi input disederhanakan hanya untuk data usaha
-        $request->validate([
+        $validated = $request->validate([
             'business_name' => 'nullable|string|max:255',
-            'business_address' => 'nullable|string',
+            'business_address' => 'nullable|string|max:500',
+            'formatted_address' => 'nullable|string|max:500',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+        ], [
+            'latitude.required' => 'Silakan tandai lokasi usaha Anda di peta.',
+            'longitude.required' => 'Silakan tandai lokasi usaha Anda di peta.',
         ]);
 
         $user = $request->user();
         $application = $this->rentalService->getApplicationByUser($user);
 
-        // Jika data pengajuan sudah ada dan ingin di-update, cek policy 'update'-nya
         if ($application) {
             $this->authorize('update', $application);
         }
 
-        // Panggil logika dari service
         $updatedOrNewApplication = $this->rentalService->processStoreOrUpdate($request, $user);
 
         return response()->json([

@@ -99,33 +99,38 @@ class AuthService
 
     /**
      * Proses Login Manual (Email & Password)
+     *
+     * NONAKTIF: Login manual khusus untuk Admin/sistem sudah digantikan
+     * oleh panel Filament (punya auth sendiri). Fungsi ini dikomentari
+     * total (bukan dihapus) supaya riwayat implementasinya tetap ada
+     * kalau suatu saat dibutuhkan lagi.
      */
-    public function handleManualLogin(array $credentials)
-    {
-        $user = User::where('email', $credentials['email'])->first();
+    // public function handleManualLogin(array $credentials)
+    // {
+    //     $user = User::where('email', $credentials['email'])->first();
 
-        if (!$user) {
-            throw new Exception('Email atau password salah', 401);
-        }
+    //     if (!$user) {
+    //         throw new Exception('Email atau password salah', 401);
+    //     }
 
-        if (!in_array($user->login_type, ['system', 'manual'])) {
-            throw new Exception('Akun ini terdaftar via Google. Silakan login menggunakan Google.', 403);
-        }
+    //     if (!in_array($user->login_type, ['system', 'manual'])) {
+    //         throw new Exception('Akun ini terdaftar via Google. Silakan login menggunakan Google.', 403);
+    //     }
 
-        if (!Hash::check($credentials['password'], $user->password)) {
-            Log::warning('Failed manual login attempt for: ' . $credentials['email']);
-            throw new Exception('Email atau password salah', 401);
-        }
+    //     if (!Hash::check($credentials['password'], $user->password)) {
+    //         Log::warning('Failed manual login attempt for: ' . $credentials['email']);
+    //         throw new Exception('Email atau password salah', 401);
+    //     }
 
-        $token = $user->createToken('system-token')->plainTextToken;
-        Log::info('System user logged in: ' . $user->email);
+    //     $token = $user->createToken('system-token')->plainTextToken;
+    //     Log::info('System user logged in: ' . $user->email);
 
-        return [
-            'access_token' => $token,
-            'token_type'   => 'Bearer',
-            'user'         => $this->formatUserData($user),
-        ];
-    }
+    //     return [
+    //         'access_token' => $token,
+    //         'token_type'   => 'Bearer',
+    //         'user'         => $this->formatUserData($user),
+    //     ];
+    // }
 
     /**
      * Helper: Buat atau Perbarui User Google & Assign Role Default

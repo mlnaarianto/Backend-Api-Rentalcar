@@ -19,7 +19,7 @@ class RentalApplicationForm
             ->columns(3)
             ->components([
 
-                // ===== KOLOM KIRI (span 2 dari 3): Info + Status ditumpuk =====
+                // ===== KOLOM KIRI (span 2 dari 3): Info + Peta + Status =====
                 Group::make([
                     Section::make('Informasi Pemohon & Usaha')
                         ->description('Data pemohon diambil otomatis dari akun terdaftar')
@@ -57,6 +57,16 @@ class RentalApplicationForm
                         ->columns(1)
                         ->collapsible(),
 
+                    // 🗺️ TAMBAHAN: Section Peta Lokasi Usaha
+                    Section::make('Peta Titik Lokasi Usaha')
+                        ->description('Visualisasi titik koordinat yang ditandai oleh perental di peta')
+                        ->icon('heroicon-o-map')
+                        ->schema([
+                            View::make('filament.resources.rental-application.map-view')
+                                ->columnSpanFull(),
+                        ])
+                        ->collapsible(),
+
                     Section::make('Status Verifikasi & Keputusan Admin')
                         ->description('Tentukan status akhir pengajuan ini')
                         ->icon('heroicon-o-shield-check')
@@ -81,9 +91,9 @@ class RentalApplicationForm
                         ])
                         ->columns(2),
                 ])
-                    ->columnSpan(2),
+                ->columnSpan(2),
 
-                // ===== KOLOM KANAN (span 1 dari 3): Dokumen, sejajar dari atas =====
+                // ===== KOLOM KANAN (span 1 dari 3): Dokumen KTP & SIM =====
                 Section::make('Dokumen Verifikasi (KTP & SIM)')
                     ->description('Klik thumbnail untuk melihat gambar ukuran penuh')
                     ->icon('heroicon-o-document-text')
