@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\RentalApplicationController;
 // use App\Http\Controllers\Api\AdminRentalApplicationController; // ✅ tambahkan import di paling atas file
+use App\Http\Controllers\Api\ChatController;
 use App\Enums\Permission;
 
 /*
@@ -136,6 +137,25 @@ Route::middleware('auth:sanctum')->group(function () {
     // Notification Management
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications/read-all', [NotificationController::class, 'markAsRead']);
+    // 👇 TAMBAHKAN DUA ROUTE INI
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+    Route::delete('/notifications', [NotificationController::class, 'clearAll']);
+
+    // Push Notification (FCM) — simpan/perbarui token device untuk user yang login
+    Route::post('/fcm-token', [NotificationController::class, 'updateFcmToken']);
+
+    // Chat Management (Kirim pesan, Reverb, & FCM)
+    Route::post('/messages', [ChatController::class, 'sendMessage']);
+
+
+    // GET /api/chats/{chatId}/messages -> Ambil riwayat pesan dalam 1 room chat
+    Route::get('/chats/{chatId}/messages', [ChatController::class, 'getMessages']);
+
+    // GET /api/chats/{chatId}/resolve -> Resolve chatId (id atau room_identifier) ke id numeric asli
+    Route::get('/chats/{chatId}/resolve', [ChatController::class, 'resolveChatId']);
+
+    // DELETE /api/messages/{messageId} -> Hapus pesan secara permanen (hard delete)
+    Route::delete('/messages/{messageId}', [ChatController::class, 'deleteMessage']);
 
 
     /*

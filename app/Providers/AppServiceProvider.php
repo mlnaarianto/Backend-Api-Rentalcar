@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Event;             // ✅ Import Facade Event
 use App\Models\User;                              // ✅ Import model User
 use App\Models\Car;                               // ✅ Import model Car
 use App\Models\Booking;                           // ✅ Import model Booking
@@ -46,5 +47,11 @@ class AppServiceProvider extends ServiceProvider
         // dst), event broadcast otomatis terpicu tanpa perlu ubah
         // kode di titik-titik pembuatan notifikasi itu sendiri.
         Notification::observe(NotificationObserver::class);
+
+        // 🟢 CATATAN: SendPushNotification TIDAK didaftarkan manual di sini.
+        // Laravel (11+) otomatis mendeteksi listener di app/Listeners yang
+        // method handle()-nya type-hint ke App\Events\NotificationCreated.
+        // Mendaftarkan manual lewat Event::listen() di sini akan membuatnya
+        // terpanggil DOBEL untuk setiap 1 event yang sama.
     }
 }

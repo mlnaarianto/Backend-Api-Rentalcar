@@ -31,7 +31,7 @@ yarn-error.log
 /public/storage
 /storage/*.key
 /storage/pail
-
+/storage/firebase/
 # Laravel legacy / optional
 bootstrap/compiled.php
 app/storage/

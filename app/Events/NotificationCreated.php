@@ -4,13 +4,13 @@ namespace App\Events;
 
 use App\Models\Notification;
 use Illuminate\Broadcasting\Channel;
-use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class NotificationCreated implements ShouldBroadcastNow
+class NotificationCreated implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -21,8 +21,6 @@ class NotificationCreated implements ShouldBroadcastNow
         $this->notification = $notification;
     }
 
-    // Channel privat per-user, supaya notifikasi user A tidak bisa
-    // "didengar" oleh user B.
     public function broadcastOn(): array
     {
         return [
@@ -30,18 +28,26 @@ class NotificationCreated implements ShouldBroadcastNow
         ];
     }
 
-    // Nama event yang didengarkan di FE, biar gak perlu prefix App\Events\...
+    // Wajib diisi — kalau tidak, Laravel pakai nama class penuh
+    // (App\Events\NotificationCreated), tidak match dengan Flutter
+    // yang expect event 'notification.created'.
     public function broadcastAs(): string
     {
         return 'notification.created';
     }
 
-    // Data yang dikirim ke FE — bentuknya sama persis dengan yang
-    // sudah dipakai Flutter & React sekarang (title, message, type, dll)
+    // Wajib diisi supaya bentuk payload-nya {"data": {...}}
+    // sesuai yang Flutter parse: payload['data']
     public function broadcastWith(): array
     {
         return [
-            'data' => $this->notification,
+            'data' => [
+                'id'      => $this->notification->id,
+                'title'   => $this->notification->title,
+                'message' => $this->notification->message,
+                'type'    => $this->notification->type,
+                'is_read' => $this->notification->is_read,
+            ],
         ];
     }
 }

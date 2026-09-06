@@ -7,10 +7,12 @@ use App\Models\Notification;
 
 class NotificationObserver
 {
-    // Dipanggil OTOMATIS oleh Laravel setiap kali Notification::create()
-    // (atau ->save() pada record baru) berhasil — di manapun itu dipanggil.
     public function created(Notification $notification): void
-    {
-        broadcast(new NotificationCreated($notification));
-    }
+{
+    // Ganti dari broadcast() -> dispatch event biasa.
+    // Karena NotificationCreated implements ShouldBroadcast,
+    // ini otomatis: (1) jalankan SendPushNotification listener,
+    // (2) broadcast ke Reverb. Dua-duanya sekaligus, satu baris.
+    NotificationCreated::dispatch($notification);
+}
 }

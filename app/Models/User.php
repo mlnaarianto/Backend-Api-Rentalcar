@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 
 use Spatie\Permission\Traits\HasRoles; 
 
-#[Fillable(['google_id', 'name', 'email', 'password', 'avatar', 'login_type', 'email_verified_at'])]
+#[Fillable(['google_id', 'name', 'email', 'password', 'avatar', 'login_type', 'email_verified_at', 'fcm_token'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -52,5 +52,21 @@ class User extends Authenticatable
     public function rentalApplication(): HasOne
     {
         return $this->hasOne(RentalApplication::class);
+    }
+
+    /**
+     * Relasi ke pesan-pesan yang dikirim oleh user ini
+     */
+    public function messages(): HasMany
+    {
+        return $this->hasMany(Message::class, 'sender_id');
+    }
+
+    /**
+     * Relasi ke chat room yang pernah dikelola sebagai last sender
+     */
+    public function chatsAsLastSender(): HasMany
+    {
+        return $this->hasMany(Chat::class, 'last_sender_id');
     }
 }
