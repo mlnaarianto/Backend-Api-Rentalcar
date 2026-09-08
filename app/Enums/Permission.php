@@ -8,28 +8,31 @@ enum Permission: string
     case ManageUsers = 'manage-users';
     case ManageRoles = 'manage-roles';
 
-    // Manajemen Verifikasi Perental
+        // Manajemen Verifikasi Perental
     case VerifyPerental = 'verify-perental';
 
-    // Manajemen Mobil (Mobil & Katalog)
+        // Manajemen Mobil (Mobil & Katalog)
     case ManageCars = 'manage-cars'; // Untuk tambah/edit/hapus (Perental/Admin)
     case ViewCars = 'view-cars';     // Untuk melihat daftar/detail mobil (Bisa untuk Penyewa/Driver)
     case ViewAllCars = 'view-all-cars'; // Bisa melihat semua mobil dari semua perental
 
-    // Manajemen Booking & Pembayaran
+        // Manajemen Booking & Pembayaran
     case ManageBookings = 'manage-bookings';           // Perental: kelola booking untuk mobil miliknya
     case ManageAllBookings = 'manage-all-bookings';     // 👈 BARU: admin-level, lihat & kelola SEMUA booking lintas Perental
     case ManagePayments = 'manage-payments';
 
-    // Hak akses untuk Penyewa & Pengguna
+        // Hak akses untuk Penyewa & Pengguna
     case CreateBooking = 'create-booking';
     case ViewOwnBooking = 'view-own-booking';
     case CancelOwnBooking = 'cancel-own-booking';
     case ManageProfile = 'manage-profile'; // Wajib ada untuk update profil / KTP di Flutter
 
-    // Hak akses untuk Driver / Perental
+        // Hak akses untuk Driver / Perental
     case ViewAssignedBooking = 'view-assigned-booking';
     case UpdateBookingStatus = 'update-booking-status'; // Hanya Perental & Driver (bukan Penyewa)
+
+        // Manajemen Chat / Support
+    case ReceiveSupportChat = 'receive-support-chat'; // Penanda user yang jadi penerima Chat Admin (CS)
 
     public static function values(): array
     {

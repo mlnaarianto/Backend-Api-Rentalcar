@@ -10,6 +10,7 @@ use App\Models\Notification;
 use App\Events\MessageSent;
 use App\Events\MessageDeleted;
 use App\Events\NotificationCreated;
+use App\Enums\Role;
 use Filament\Pages\Page;
 use Livewire\Attributes\On;
 use Illuminate\Support\Facades\Auth;
@@ -25,11 +26,17 @@ class ManageChat extends Page
     public ?int $activeChatId = null;
     public string $newMessageText = '';
 
+    // 🟢 DIPERBAIKI: sebelumnya pakai string literal mentah
+    // ('Super Admin', 'Perental'). Kebetulan sudah cocok persis dengan
+    // Role::SuperAdmin->value & Role::Perental->value, jadi tidak bug --
+    // tapi rawan typo kalau ada yang edit manual di masa depan tanpa sadar
+    // formatnya (kapitalisasi & spasi) harus persis sama. Disamakan pakai
+    // enum, konsisten dengan Gate::before() di AppServiceProvider.
     public static function canAccess(): bool
     {
         $user = auth()->user();
         if (!$user) return false;
-        return $user->hasRole('Super Admin') || $user->hasRole('Perental');
+        return $user->hasRole(Role::SuperAdmin->value) || $user->hasRole(Role::Perental->value);
     }
 
     /**
@@ -263,7 +270,7 @@ class ManageChat extends Page
 
         $users = User::whereIn('id', $senderIds)->get();
 
-        return $users->first(fn (User $u) => $u->hasRole('Penyewa'))
+        return $users->first(fn (User $u) => $u->hasRole(Role::Penyewa->value))
             ?? $users->firstWhere('id', '!=', Auth::id());
     }
 
@@ -284,7 +291,7 @@ class ManageChat extends Page
             return null;
         }
 
-        return $participants->first(fn (User $u) => $u->hasRole('Penyewa'))
+        return $participants->first(fn (User $u) => $u->hasRole(Role::Penyewa->value))
             ?? $participants->firstWhere('id', '!=', Auth::id());
     }
 }

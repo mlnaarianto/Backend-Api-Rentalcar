@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\Permission;
 use App\Http\Controllers\Controller;
 use App\Models\Chat;
 use App\Models\Message;
@@ -14,6 +15,43 @@ use Illuminate\Http\Request;
 
 class ChatController extends Controller
 {
+    /**
+     * Ambil user yang jadi penerima "Chat Admin (CS)" — ditandai lewat
+     * permission Permission::ReceiveSupportChat, BUKAN hardcode ID.
+     *
+     * Kenapa pakai permission, bukan role 'super_admin' langsung:
+     * Gate::before() di AppServiceProvider sudah bikin SEMUA super_admin
+     * otomatis lolos setiap authorization check (bypass total), jadi
+     * status "super_admin" itu urusannya cuma soal HAK AKSES, bukan
+     * penanda "siapa CS-nya". Permission ini independen dari itu — bisa
+     * di-assign ke satu user spesifik (siapapun rolenya) lewat Filament,
+     * tanpa mengubah kode di sisi manapun kalau suatu saat orangnya ganti.
+     *
+     * Dipakai oleh Sidebar (React & Flutter) SEBELUM membuka halaman
+     * Chat, supaya receiver_id tidak lagi hardcode ke '1'.
+     */
+    public function getSupportAgent()
+    {
+        $agent = User::permission(Permission::ReceiveSupportChat->value)->first();
+
+        if (!$agent) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Support agent belum di-set. Silakan assign permission "'
+                    . Permission::ReceiveSupportChat->value . '" ke salah satu user lewat Filament.',
+                'data' => null,
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'id' => $agent->id,
+                'name' => $agent->name,
+            ],
+        ], 200);
+    }
+
     /**
      * Ambil daftar pesan berdasarkan chat_id (bisa berupa angka ID asli atau string unik room).
      */

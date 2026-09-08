@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 
 use Spatie\Permission\Traits\HasRoles; 
 
-#[Fillable(['google_id', 'name', 'email', 'password', 'avatar', 'login_type', 'email_verified_at', 'fcm_token'])]
+#[Fillable(['google_id', 'name', 'email', 'password', 'avatar', 'login_type', 'email_verified_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -68,5 +68,13 @@ class User extends Authenticatable
     public function chatsAsLastSender(): HasMany
     {
         return $this->hasMany(Chat::class, 'last_sender_id');
+    }
+
+    /**
+     * Relasi ke token-token FCM milik user ini (multi-device)
+     */
+    public function fcmTokens(): HasMany
+    {
+        return $this->hasMany(UserFcmToken::class);
     }
 }

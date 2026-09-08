@@ -143,10 +143,25 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Push Notification (FCM) — simpan/perbarui token device untuk user yang login
     Route::post('/fcm-token', [NotificationController::class, 'updateFcmToken']);
+    Route::delete('/fcm-token', [NotificationController::class, 'removeFcmToken']);
 
-    // Chat Management (Kirim pesan, Reverb, & FCM)
+    /*
+    |--------------------------------------------------------------------------
+    | Chat Management (Kirim pesan, Reverb, & FCM)
+    |--------------------------------------------------------------------------
+    */
+
+    // GET /api/support-agent -> Ambil ID user CS yang sedang aktif.
+    // Ditandai lewat Permission::ReceiveSupportChat (assign/pindah lewat
+    // Filament), BUKAN hardcode ID seperti sebelumnya di Sidebar React &
+    // Flutter. Tidak dikasih middleware permission tambahan — semua user
+    // yang login (Penyewa/Driver/Perental) memang perlu tahu siapa CS-nya
+    // supaya bisa buka menu "Chat Admin (CS)". Sengaja ditaruh di atas
+    // '/messages' & '/chats/{chatId}/...' supaya kelompok Chat ini rapi
+    // jadi satu blok.
+    Route::get('/support-agent', [ChatController::class, 'getSupportAgent']);
+
     Route::post('/messages', [ChatController::class, 'sendMessage']);
-
 
     // GET /api/chats/{chatId}/messages -> Ambil riwayat pesan dalam 1 room chat
     Route::get('/chats/{chatId}/messages', [ChatController::class, 'getMessages']);
