@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('personal_data', function (Blueprint $table) {
-            $table->string('sim_number')->nullable()->after('ktp_image');
+            $table->string('sim_number')->nullable()->unique()->after('ktp_image');
             $table->string('sim_type')->nullable()->after('sim_number');
             $table->date('sim_expired_date')->nullable()->after('sim_type');
             $table->string('sim_image')->nullable()->after('sim_expired_date');

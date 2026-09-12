@@ -62,21 +62,11 @@ class Car extends Model
                     return null;
                 }
 
-                // Jika sudah berupa URL lengkap, kembalikan langsung
                 if (filter_var($value, FILTER_VALIDATE_URL)) {
                     return $value;
                 }
 
-                // IP khusus untuk akses publik / Flutter di HP fisik
-                $baseUrl = 'http://192.168.189.4:8000';
-
-                // Jika request berasal dari panel Filament / Admin di browser
-                if (request()->is('admin*') || request()->is('filament*')) {
-                    return Storage::url($value);
-                }
-
-                // Untuk kebutuhan API / Flutter
-                return $baseUrl . Storage::url($value);
+                return Storage::disk('public')->url($value);
             }
         );
     }

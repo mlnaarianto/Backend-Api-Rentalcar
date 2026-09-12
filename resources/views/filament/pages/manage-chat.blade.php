@@ -196,7 +196,7 @@
             window.Echo = new Echo({
                 broadcaster: 'reverb',
                 key: '{{ env('REVERB_APP_KEY') }}',
-                wsHost: '{{ env('REVERB_HOST') }}',
+                wsHost: '{{ parse_url(config('app.url'), PHP_URL_HOST) }}',
                 wsPort: {{ env('REVERB_PORT', 9090) }},
                 wssPort: {{ env('REVERB_PORT', 9090) }},
                 forceTLS: {{ env('REVERB_SCHEME', 'http') === 'https' ? 'true' : 'false' }},

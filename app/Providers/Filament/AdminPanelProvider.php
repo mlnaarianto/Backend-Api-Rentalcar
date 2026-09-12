@@ -17,6 +17,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Althinect\FilamentSpatieRolesPermissions\FilamentSpatieRolesPermissionsPlugin; 
+use Filament\Auth\MultiFactor\App\AppAuthentication;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -28,6 +29,11 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->brandName('Laravel Filament')
             ->login()
+            ->profile()
+        ->multiFactorAuthentication([
+            AppAuthentication::make()
+                ->recoverable(),
+        ])
             ->colors([
                 'primary' => Color::Amber,
             ])

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,11 +14,11 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
 
-use Spatie\Permission\Traits\HasRoles; 
+use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['google_id', 'name', 'email', 'password', 'avatar', 'login_type', 'email_verified_at'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements HasAppAuthentication, HasAppAuthenticationRecovery
 {
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
@@ -76,5 +78,48 @@ class User extends Authenticatable
     public function fcmTokens(): HasMany
     {
         return $this->hasMany(UserFcmToken::class);
+    }
+
+    /**
+     * Relasi ke tabel 2FA terpisah
+     */
+    public function twoFactorAuth(): HasOne
+    {
+        return $this->hasOne(UserTwoFactorAuth::class);
+    }
+
+    // ===== Implementasi HasAppAuthentication =====
+
+    public function getAppAuthenticationSecret(): ?string
+    {
+        return $this->twoFactorAuth?->secret;
+    }
+
+    public function saveAppAuthenticationSecret(?string $secret): void
+    {
+        $this->twoFactorAuth()->updateOrCreate(
+            ['user_id' => $this->id],
+            ['secret' => $secret],
+        );
+    }
+
+    public function getAppAuthenticationHolderName(): string
+    {
+        return $this->email;
+    }
+
+    // ===== Implementasi HasAppAuthenticationRecovery =====
+
+    public function getAppAuthenticationRecoveryCodes(): ?array
+    {
+        return $this->twoFactorAuth?->recovery_codes;
+    }
+
+    public function saveAppAuthenticationRecoveryCodes(?array $codes): void
+    {
+        $this->twoFactorAuth()->updateOrCreate(
+            ['user_id' => $this->id],
+            ['recovery_codes' => $codes],
+        );
     }
 }

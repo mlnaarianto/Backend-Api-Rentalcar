@@ -89,13 +89,21 @@ class BookingPolicy
 
     /**
      * Menentukan apakah user bisa mengubah status booking (field 'status'
-     * dan/atau 'payment_status' manual).
+     * dan/atau 'payment_status' manual, termasuk konfirmasi tunai/COD).
      *
-     * 👇 Penyewa SENGAJA tidak diberi akses di sini. Field 'status' pesanan
-     * (pending/confirmed/active/completed/cancelled) adalah hak Perental &
-     * Driver. Konfirmasi pembayaran Penyewa lewat jalur terpisah yang aman:
-     * BookingController::checkPayment(), yang membaca status asli dari
-     * Midtrans — bukan endpoint generic ini.
+     * 👇 HANYA Perental (pemilik mobil terkait) yang diizinkan di sini.
+     *
+     * - Penyewa SENGAJA tidak diberi akses. Field 'status' pesanan
+     *   (pending/confirmed/active/completed/cancelled) adalah hak Perental.
+     *   Konfirmasi pembayaran Penyewa lewat jalur terpisah yang aman:
+     *   BookingController::checkPayment(), yang membaca status asli dari
+     *   Midtrans — bukan endpoint generic ini.
+     *
+     * - Driver yang ditugaskan JUGA SENGAJA tidak diberi akses (poin ini
+     *   dulu ada, sudah dihapus). Driver di aplikasi ini hanya menjalankan
+     *   tugas antar/jemput, bukan pihak yang menerima/mengelola pembayaran
+     *   atau mengubah status pesanan — termasuk konfirmasi tunai (COD),
+     *   yang tetap murni wewenang Perental sebagai pemilik mobil.
      */
     public function updateStatus(User $user, Booking $booking): bool
     {
@@ -103,17 +111,7 @@ class BookingPolicy
             return false;
         }
 
-        // 1. Perental (pemilik mobil)
-        if ($booking->car && $booking->car->user_id === $user->id) {
-            return true;
-        }
-
-        // 2. Driver yang ditugaskan
-        if ($booking->driver_id === $user->id) {
-            return true;
-        }
-
-        return false;
+        return $booking->car && $booking->car->user_id === $user->id;
     }
 
     // Catatan: BookingController::checkPayment() memakai

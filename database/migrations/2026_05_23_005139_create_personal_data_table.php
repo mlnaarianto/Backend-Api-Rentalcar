@@ -20,7 +20,7 @@ return new class extends Migration
                   ->cascadeOnDelete(); // Jika user dihapus, personal data ikut terhapus
             
             // Kolom data personal
-            $table->string('phone')->nullable();
+            $table->string('phone')->nullable()->unique();
             $table->date('birth_date')->nullable();
             $table->text('address')->nullable();
 
