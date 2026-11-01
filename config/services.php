@@ -49,4 +49,6 @@ return [
         'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
     ],
 
+    'android_client_id' => env('GOOGLE_ANDROID_CLIENT_ID'),
+
 ];

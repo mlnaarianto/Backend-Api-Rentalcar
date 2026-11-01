@@ -14,24 +14,29 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withBroadcasting(
         __DIR__.'/../routes/channels.php',
-        ['middleware' => ['api', 'auth:sanctum']],
+        ['middleware' => ['api', 'auth:sanctum', 'ability:access-api']],
     )
     ->withMiddleware(function (Middleware $middleware) {
         // Tambahkan CORS middleware ke global middleware
         $middleware->append(HandleCors::class);
-        
+
         // Atau tambahkan ke grup API
         $middleware->api(prepend: [
             HandleCors::class,
         ]);
-        
-        // Alias middleware jika perlu
+
+        // Alias middleware
         $middleware->alias([
             'cors' => HandleCors::class,
-            // 👇 TAMBAHKAN ALIAS SPATIE DI SINI
+
+            // Spatie Permission
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+
+            // 👇 Sanctum abilities (untuk access token vs refresh token)
+            'abilities' => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
+            'ability'   => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
         ]);
 
         // Konfigurasi untuk sanctum

@@ -25,6 +25,10 @@ Route::prefix('auth')->group(function () {
     // Mobile: Verifikasi token Google dari Flutter
     Route::post('/google/mobile', [AuthController::class, 'handleMobileGoogleLogin']);
 
+    // Refresh token: hanya refresh token yang boleh lewat
+    Route::post('/refresh', [AuthController::class, 'refresh'])
+        ->middleware(['auth:sanctum', 'ability:issue-access-token']);
+
     // Manual: Login email + password
     // NONAKTIF: login manual khusus Admin/sistem sudah digantikan oleh
     // panel Filament (punya auth sendiri). Method controller-nya juga
@@ -74,7 +78,7 @@ Route::get('/testing/simulate-qris-pay/{orderId}', function ($orderId) {
 | Protected Routes (Wajib mengirim Header "Authorization: Bearer <token>")
 |--------------------------------------------------------------------------
 */
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'ability:access-api'])->group(function () {
 
     // Auth Actions
     Route::post('/logout', [AuthController::class, 'logout']);

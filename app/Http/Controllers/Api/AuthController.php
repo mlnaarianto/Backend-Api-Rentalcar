@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\AuthService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Exception;
 
 class AuthController extends Controller
@@ -58,11 +59,13 @@ class AuthController extends Controller
             $result = $this->authService->handleMobileGoogleLogin($request->id_token);
 
             return response()->json([
-                'status'       => 'success',
-                'message'      => 'Login berhasil',
-                'access_token' => $result['access_token'],
-                'token_type'   => $result['token_type'],
-                'user'         => $result['user'],
+                'status'        => 'success',
+                'message'       => 'Login berhasil',
+                'access_token'  => $result['access_token'],
+                'refresh_token' => $result['refresh_token'],
+                'token_type'    => $result['token_type'],
+                'expires_in'    => $result['expires_in'],
+                'user'          => $result['user'],
             ], 200);
         } catch (Exception $e) {
             Log::error('Google Mobile Auth Error: ' . $e->getMessage());
@@ -82,8 +85,9 @@ class AuthController extends Controller
      *
      * NONAKTIF: Endpoint ini sudah tidak dipakai karena login untuk
      * Admin/sistem kini ditangani oleh panel Filament (auth bawaan
-     * Filament sendiri) bukan untuk client frontend lainnya. Dikomentari total (bukan dihapus) supaya
-     * mudah diaktifkan kembali kalau dibutuhkan di masa depan.
+     * Filament sendiri) bukan untuk client frontend lainnya. Dikomentari
+     * total (bukan dihapus) supaya mudah diaktifkan kembali kalau
+     * dibutuhkan di masa depan.
      * Jangan lupa komentari juga rute-nya di routes/api.php.
      */
     // public function handleManualLogin(Request $request)
@@ -100,11 +104,13 @@ class AuthController extends Controller
     //         ]);
 
     //         return response()->json([
-    //             'status'       => 'success',
-    //             'message'      => 'Login berhasil',
-    //             'access_token' => $result['access_token'],
-    //             'token_type'   => $result['token_type'],
-    //             'user'         => $result['user'],
+    //             'status'        => 'success',
+    //             'message'       => 'Login berhasil',
+    //             'access_token'  => $result['access_token'],
+    //             'refresh_token' => $result['refresh_token'],
+    //             'token_type'    => $result['token_type'],
+    //             'expires_in'    => $result['expires_in'],
+    //             'user'          => $result['user'],
     //         ], 200);
     //     } catch (Exception $e) {
     //         Log::error('Manual Login Error: ' . $e->getMessage());
@@ -120,8 +126,39 @@ class AuthController extends Controller
 
     /**
      * ========================================================
-     * 4. FUNGSI PROTECTED (Wajib bawa Bearer Token)
+     * 4. REFRESH TOKEN (Wajib bawa Refresh Token sebagai Bearer)
      * ========================================================
+     * Route: ability:issue-access-token
+     */
+    public function refresh(Request $request)
+    {
+        try {
+            $user      = $request->user();
+            $sessionId = Str::after($user->currentAccessToken()->name, 'refresh|');
+
+            $tokens = $this->authService->rotateTokens($user, $sessionId);
+
+            return response()->json([
+                'status'        => 'success',
+                'access_token'  => $tokens['access_token'],
+                'refresh_token' => $tokens['refresh_token'],
+                'token_type'    => $tokens['token_type'],
+                'expires_in'    => $tokens['expires_in'],
+            ]);
+        } catch (Exception $e) {
+            Log::error('Refresh Token Error: ' . $e->getMessage());
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal memperbarui token',
+            ], 500);
+        }
+    }
+
+    /**
+     * ========================================================
+     * 5. FUNGSI PROTECTED (Wajib bawa Access Token)
+     * ========================================================
+     * Route: ability:access-api
      */
     public function user(Request $request)
     {
@@ -139,8 +176,15 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         try {
-            Log::info('Logging out user: ' . $request->user()->email);
-            $request->user()->currentAccessToken()->delete();
+            $user      = $request->user();
+            $sessionId = Str::after($user->currentAccessToken()->name, 'access|');
+
+            Log::info('Logging out user: ' . $user->email);
+
+            // Hapus access token + refresh token milik sesi ini
+            $user->tokens()
+                ->whereIn('name', ["access|{$sessionId}", "refresh|{$sessionId}"])
+                ->delete();
 
             return response()->json([
                 'status'  => 'success',

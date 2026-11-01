@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Google\Client as GoogleClient;
 use Exception;
@@ -34,15 +36,22 @@ class AuthService
         }
 
         $user = $this->createOrUpdateGoogleUser([
-            'email'  => $googleUser->email,
+            'email'     => $googleUser->email,
             'google_id' => $googleUser->id,
-            'name'   => $googleUser->name,
-            'avatar' => $googleUser->avatar,
+            'name'      => $googleUser->name,
+            'avatar'    => $googleUser->avatar,
         ]);
 
-        $token = $user->createToken('web-token')->plainTextToken;
+        $tokens = $this->issueTokenPair($user);
 
-        return 'http://localhost:3000/dashboard?token=' . $token;
+        // SEMENTARA: sampai tahap cookie httpOnly dikerjakan.
+        // Pakai fragment (#) bukan query (?) supaya token tidak ikut
+        // terkirim ke server/log. React membacanya dari window.location.hash.
+        return 'http://localhost:3000/dashboard#' . http_build_query([
+            'access_token'  => $tokens['access_token'],
+            'refresh_token' => $tokens['refresh_token'],
+            'expires_in'    => $tokens['expires_in'],
+        ]);
     }
 
     /**
@@ -53,8 +62,8 @@ class AuthService
         $client = new GoogleClient();
 
         $allowedClientIds = [
-            env('GOOGLE_CLIENT_ID'),
-            env('GOOGLE_ANDROID_CLIENT_ID'),
+            config('services.google.client_id'),
+            config('services.google.android_client_id'),
         ];
 
         $payload = null;
@@ -87,14 +96,56 @@ class AuthService
             'avatar'    => $payload['picture'] ?? null,
         ]);
 
-        $token = $user->createToken('mobile-token')->plainTextToken;
+        $tokens = $this->issueTokenPair($user);
         Log::info('User logged in successfully: ' . $user->email);
 
+        return array_merge($tokens, [
+            'user' => $this->formatUserData($user),
+        ]);
+    }
+
+    /**
+     * Terbitkan pasangan access + refresh token untuk satu sesi (device).
+     */
+    public function issueTokenPair(User $user, ?string $sessionId = null): array
+    {
+        $sessionId ??= (string) Str::uuid();
+
+        $accessTtl  = (int) config('sanctum.access_token_ttl', 15);
+        $refreshTtl = (int) config('sanctum.refresh_token_ttl', 480);
+
+        $access = $user->createToken(
+            "access|{$sessionId}",
+            ['access-api'],
+            now()->addMinutes($accessTtl)
+        );
+
+        $refresh = $user->createToken(
+            "refresh|{$sessionId}",
+            ['issue-access-token'],
+            now()->addMinutes($refreshTtl)
+        );
+
         return [
-            'access_token' => $token,
-            'token_type'   => 'Bearer',
-            'user'         => $this->formatUserData($user),
+            'access_token'  => $access->plainTextToken,
+            'refresh_token' => $refresh->plainTextToken,
+            'token_type'    => 'Bearer',
+            'expires_in'    => $accessTtl * 60, // detik
         ];
+    }
+
+    /**
+     * Rotation: hapus pasangan lama sesi ini, terbitkan pasangan baru.
+     */
+    public function rotateTokens(User $user, string $sessionId): array
+    {
+        return DB::transaction(function () use ($user, $sessionId) {
+            $user->tokens()
+                ->whereIn('name', ["access|{$sessionId}", "refresh|{$sessionId}"])
+                ->delete();
+
+            return $this->issueTokenPair($user, $sessionId);
+        });
     }
 
     /**
@@ -122,14 +173,12 @@ class AuthService
     //         throw new Exception('Email atau password salah', 401);
     //     }
 
-    //     $token = $user->createToken('system-token')->plainTextToken;
+    //     $tokens = $this->issueTokenPair($user);
     //     Log::info('System user logged in: ' . $user->email);
 
-    //     return [
-    //         'access_token' => $token,
-    //         'token_type'   => 'Bearer',
-    //         'user'         => $this->formatUserData($user),
-    //     ];
+    //     return array_merge($tokens, [
+    //         'user' => $this->formatUserData($user),
+    //     ]);
     // }
 
     /**
