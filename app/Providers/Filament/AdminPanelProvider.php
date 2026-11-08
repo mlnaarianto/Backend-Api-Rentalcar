@@ -2,6 +2,9 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\EditProfile;
+use Althinect\FilamentSpatieRolesPermissions\FilamentSpatieRolesPermissionsPlugin;
+use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -16,8 +19,6 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use Althinect\FilamentSpatieRolesPermissions\FilamentSpatieRolesPermissionsPlugin; 
-use Filament\Auth\MultiFactor\App\AppAuthentication;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -29,11 +30,11 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->brandName('Laravel Filament')
             ->login()
-            ->profile()
-        ->multiFactorAuthentication([
-            AppAuthentication::make()
-                ->recoverable(),
-        ])
+            ->profile(EditProfile::class) // ✅ diganti dari ->profile()
+            ->multiFactorAuthentication([
+                AppAuthentication::make()
+                    ->recoverable(),
+            ])
             ->colors([
                 'primary' => Color::Amber,
             ])

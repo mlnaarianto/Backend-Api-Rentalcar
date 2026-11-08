@@ -4,23 +4,30 @@ namespace App\Models;
 
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
+use Filament\Models\Contracts\HasAvatar;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
-
+use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['google_id', 'name', 'email', 'password', 'avatar', 'login_type', 'email_verified_at'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements HasAppAuthentication, HasAppAuthenticationRecovery
+class User extends Authenticatable implements HasAppAuthentication, HasAppAuthenticationRecovery, HasAvatar
 {
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
+
+    /**
+     * Field tambahan yang otomatis ikut di JSON response (API Flutter & React).
+     * Klien cukup pakai `avatar_url`, bukan `avatar` (yang isinya path mentah).
+     */
+    protected $appends = ['avatar_url'];
 
     protected function casts(): array
     {
@@ -29,6 +36,28 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
             'password' => 'hashed',
         ];
     }
+
+    // ===== Accessor: URL avatar lengkap =====
+
+    /**
+     * - Avatar dari Google login -> sudah berupa URL (http...), dikembalikan apa adanya.
+     * - Avatar hasil upload Filament -> path relatif di disk 'public',
+     *   diubah jadi URL lengkap berdasarkan APP_URL.
+     */
+    protected function avatarUrl(): Attribute
+    {
+        return Attribute::get(function () {
+            if (! $this->avatar) {
+                return null;
+            }
+
+            return str_starts_with($this->avatar, 'http')
+                ? $this->avatar
+                : Storage::disk('public')->url($this->avatar);
+        });
+    }
+
+    // ===== Relasi =====
 
     public function personalData(): HasOne
     {
@@ -40,52 +69,41 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
         return $this->hasMany(Car::class);
     }
 
-    /**
-     * Relasi ke booking-booking yang dibuat user (sebagai Penyewa)
-     */
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);
     }
 
-    /**
-     * Relasi ke pengajuan perental (Rental Application) milik user ini
-     */
     public function rentalApplication(): HasOne
     {
         return $this->hasOne(RentalApplication::class);
     }
 
-    /**
-     * Relasi ke pesan-pesan yang dikirim oleh user ini
-     */
     public function messages(): HasMany
     {
         return $this->hasMany(Message::class, 'sender_id');
     }
 
-    /**
-     * Relasi ke chat room yang pernah dikelola sebagai last sender
-     */
     public function chatsAsLastSender(): HasMany
     {
         return $this->hasMany(Chat::class, 'last_sender_id');
     }
 
-    /**
-     * Relasi ke token-token FCM milik user ini (multi-device)
-     */
     public function fcmTokens(): HasMany
     {
         return $this->hasMany(UserFcmToken::class);
     }
 
-    /**
-     * Relasi ke tabel 2FA terpisah
-     */
     public function twoFactorAuth(): HasOne
     {
         return $this->hasOne(UserTwoFactorAuth::class);
+    }
+
+    // ===== Implementasi HasAvatar (khusus tampilan Filament) =====
+
+    public function getFilamentAvatarUrl(): ?string
+    {
+        return $this->avatar_url;
     }
 
     // ===== Implementasi HasAppAuthentication =====

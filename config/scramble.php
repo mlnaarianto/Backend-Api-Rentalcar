@@ -1,78 +1,118 @@
 <?php
 
 use Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess;
+use Dedoc\Scramble\SecurityDocumentation\MiddlewareAuthSecurityStrategy;
+use Dedoc\Scramble\Support\Generator\SecurityScheme;
 
 return [
     /*
-     * Which routes to document. String or array form; use Scramble::routes() for custom selection.
-     *
-     * 'api_path' => [
-     *     'include' => 'api',
-     *     'exclude' => ['api/internal'],
-     * ],
-     *
-     * Without *, patterns match path segments (api matches api and api/users, not apiary).
-     * With *, Str::is is used (e.g. api/v*).
-     *
-     * One static include → default server is /{include} and paths are stripped (/users).
-     * Multiple includes or wildcards → server defaults to / and paths stay full (/api/users).
-     * Override with `servers`, or use Scramble::registerApi() for separate bases.
+     * Prefix route yang didokumentasikan.
      */
     'api_path' => 'api',
 
-    /*
-     * Your API domain. By default, app domain is used. This is also a part of the default API routes
-     * matcher, so when implementing your own, make sure you use this config if needed.
-     */
     'api_domain' => null,
 
     /*
-     * The path where your OpenAPI specification will be exported.
+     * Lokasi default hasil `php artisan scramble:export`.
+     * Biar langsung dibaca Swagger UI (/docs/api.json), arahkan ke public/docs.
      */
-    'export_path' => 'api.json',
+    'export_path' => 'public/docs/api.json',
 
-    /*
-     * Cache configuration for the generated OpenAPI document.
-     *
-     * Use `scramble:cache` to warm the cache and `scramble:clear` to invalidate it.
-     */
     'cache' => [
         'key' => 'scramble.openapi',
         'store' => 'file',
     ],
 
+    /*
+     * Pilih route yang ditampilkan:
+     * - hanya yang berawalan api/
+     * - endpoint testing (simulate-qris-pay) disembunyikan
+     * AuthController TIDAK lagi dikecualikan.
+     */
     'routes' => function (\Illuminate\Routing\Route $route) {
         $uri = $route->uri();
-        $action = $route->getActionName(); // contoh: App\Http\Controllers\Api\AuthController@logout
 
-        $isApi = str_starts_with($uri, 'api/');
-        $isAuthController = str_contains($action, 'AuthController');
-
-        return $isApi && !$isAuthController;
+        return str_starts_with($uri, 'api/')
+            && ! str_contains($uri, 'testing/');
     },
 
-    'info' => [
-        /*
-         * API version.
-         */
-        'version' => env('API_VERSION', '0.0.1'),
 
-        /*
-         * Description rendered on the home page of the API documentation (`/docs/api`).
-         */
-        'description' => '',
+
+    // Ganti blok 'info' di config/scramble.php dengan ini.
+    'info' => [
+        'version' => env('API_VERSION', '1.0.0'),
+
+        'description' => <<<'MD'
+API untuk aplikasi **Car Rental** (Flutter & React).
+
+---
+
+### Login Mobile (Flutter)
+1. Aplikasi menampilkan Google Sign-In dan mendapat `id_token`.
+2. Kirim ke `POST /auth/google/mobile` dengan body `{ "id_token": "..." }`.
+3. Ambil `access_token` dari response.
+4. Klik **Authorize** (gembok kanan atas), tempel token **tanpa** kata `Bearer`.
+
+### Login Web (React)
+Bukan endpoint JSON, jadi tidak bisa dicoba dari sini. Arahkan browser ke:
+`http://localhost:8000/auth/google`
+Setelah login Google, server me-redirect ke frontend membawa token.
+
+### Refresh token
+`POST /auth/refresh` memakai **refresh token**, bukan access token.
+Ganti isi **Authorize** dengan refresh token sebelum menjalankannya.
+
+---
+
+### Cara tes di Swagger
+
+`id_token` hanya bisa dibuat oleh Google, jadi ada dua cara untuk mendapat token.
+
+#### Cara 1: Google OAuth Playground (menguji login Google yang asli)
+1. Buka https://developers.google.com/oauthplayground
+2. Klik ikon gerigi, centang **Use your own OAuth credentials**, lalu isi Client ID dan Client Secret dari client **Laravel Backend** (tipe Web application).
+3. Di Google Cloud Console, tambahkan `https://developers.google.com/oauthplayground` ke **Authorized redirect URIs** pada client yang sama.
+4. Di kotak **Input your own scopes** isi `openid email profile`, klik **Authorize APIs**, lalu pilih akun Google.
+5. Klik **Exchange authorization code for tokens**, lalu salin nilai `id_token` (diawali `eyJ`).
+6. Tempel ke body `POST /auth/google/mobile` di sini dan klik **Execute**.
+7. Salin `access_token` dari response, lalu tempel di **Authorize**.
+
+`id_token` hanya berlaku sekitar 1 jam. Kalau server menolak, ulangi langkah 4 sampai 6.
+
+#### Cara 2: Token dari Tinker (paling cepat, tanpa Google)
+Hanya untuk development. User harus sudah ada di database.
+
+```bash
+php artisan tinker
+```
+
+```php
+$user = App\Models\User::where('email', 'email@contoh.com')->first();
+$user->createToken('access|test', ['access-api'])->plainTextToken;
+```
+
+Tempel hasilnya di **Authorize**. Untuk mencoba `/auth/refresh`, buat refresh token:
+
+```php
+$user->createToken('refresh|test', ['issue-access-token'])->plainTextToken;
+```
+
+---
+
+### Catatan
+- Permission tiap endpoint mengikuti role user. Kalau muncul **403**, role user belum punya permission yang dibutuhkan.
+- Kalau muncul **401**, token salah, kedaluwarsa, atau memakai jenis token yang keliru (access vs refresh).
+- Kalau muncul **419** pada request POST, cek `SANCTUM_STATEFUL_DOMAINS` di `.env`. Host halaman dokumentasi ini tidak boleh ada di daftar itu.
+MD,
     ],
 
     'ui' => [
-        'title' => null,
+        'title' => 'Car Rental API Documentation',
     ],
 
     'renderer' => 'elements',
 
     'renderers' => [
-        /*
-         * Stoplight Elements config options: https://docs.stoplight.io/docs/elements/b074dc47b2826-elements-configuration-options
-         */
         'elements' => [
             'view' => 'scramble::docs',
             'theme' => 'light',
@@ -83,9 +123,6 @@ return [
             'layout' => 'responsive',
             'router' => 'hash',
         ],
-        /*
-         * Scalar API reference config options: https://scalar.com/products/api-references/configuration
-         */
         'scalar' => [
             'view' => 'scramble::scalar',
             'cdn' => 'https://cdn.jsdelivr.net/npm/@scalar/api-reference',
@@ -99,55 +136,12 @@ return [
     ],
 
     /*
-     * The list of servers of the API. By default, when `null`, server URL will be created from
-     * `scramble.api_path` and `scramble.api_domain` config variables. When providing an array, you
-     * will need to specify the local server URL manually (if needed).
-     *
-     * Example of non-default config (final URLs are generated using Laravel `url` helper):
-     *
-     * ```php
-     * 'servers' => [
-     *     'Live' => 'api',
-     *     'Prod' => 'https://scramble.dedoc.co/api',
-     * ],
-     * ```
+     * null = otomatis dari APP_URL + api_path (http://host:8000/api).
      */
     'servers' => null,
 
-    /**
-     * Determines how Scramble stores the descriptions of enum cases.
-     * Available options:
-     * - 'description' – Case descriptions are stored as the enum schema's description using table formatting.
-     * - 'extension' – Case descriptions are stored in the `x-enumDescriptions` enum schema extension.
-     *
-     *    @see https://redocly.com/docs-legacy/api-reference-docs/specification-extensions/x-enum-descriptions
-     * - false - Case descriptions are ignored.
-     */
     'enum_cases_description_strategy' => 'description',
-
-    /**
-     * Determines how Scramble stores the names of enum cases.
-     * Available options:
-     * - 'names' – Case names are stored in the `x-enumNames` enum schema extension.
-     * - 'varnames' - Case names are stored in the `x-enum-varnames` enum schema extension.
-     * - false - Case names are not stored.
-     */
     'enum_cases_names_strategy' => false,
-
-    /**
-     * When Scramble encounters deep objects in query parameters, it flattens the parameters so the generated
-     * OpenAPI document correctly describes the API. Flattening deep query parameters is relevant until
-     * OpenAPI 3.2 is released and query string structure can be described properly.
-     *
-     * For example, this nested validation rule describes the object with `bar` property:
-     * `['foo.bar' => ['required', 'int']]`.
-     *
-     * When `flatten_deep_query_parameters` is `true`, Scramble will document the parameter like so:
-     * `{"name":"foo[bar]", "schema":{"type":"int"}, "required":true}`.
-     *
-     * When `flatten_deep_query_parameters` is `false`, Scramble will document the parameter like so:
-     *  `{"name":"foo", "schema": {"type":"object", "properties":{"bar":{"type": "int"}}, "required": ["bar"]}, "required":true}`.
-     */
     'flatten_deep_query_parameters' => true,
 
     'middleware' => [
@@ -158,27 +152,15 @@ return [
     'extensions' => [],
 
     /*
-     * Automatically document API security (OpenAPI `security` / `securitySchemes`) based on route
-     * middleware.
-     *
-     * Disabled by default. Uncomment the line below to enable `MiddlewareAuthSecurityStrategy`.
-     * When at least one documented route uses middleware matching the configured patterns (by default
-     * `auth` and `auth:*`), bearer auth is applied globally. Routes without matching middleware are
-     * marked as public (`security: []`).
-     *
-     * Set to `null` explicitly to disable. If you already configure security manually via
-     * `afterOpenApiGenerated` / `extendOpenApi`, keep this disabled to avoid duplicate schemes.
-     *
-     * Customize with a class-string or [class, options]:
-     *
-     * 'security_strategy' => [
-     *     \Dedoc\Scramble\SecurityDocumentation\MiddlewareAuthSecurityStrategy::class,
-     *     [
-     *         'middleware' => ['auth', 'auth:*'],
-     *         'scheme' => \Dedoc\Scramble\Support\Generator\SecurityScheme::http('bearer'),
-     *     ],
-     * ],
+     * Gembok otomatis berdasarkan middleware route:
+     * - route ber-middleware auth / auth:* (mis. auth:sanctum) => bearer auth
+     * - route tanpa auth (login Google) => ditandai publik
      */
-    // 'security_strategy' => \Dedoc\Scramble\SecurityDocumentation\MiddlewareAuthSecurityStrategy::class,
-    'security_strategy' => null,
+    'security_strategy' => [
+        MiddlewareAuthSecurityStrategy::class,
+        [
+            'middleware' => ['auth', 'auth:*'],
+            'scheme' => SecurityScheme::http('bearer'),
+        ],
+    ],
 ];

@@ -13,6 +13,15 @@
         .swagger-ui .topbar {
             display: none; /* Menyembunyikan topbar bawaan swagger jika tidak perlu */
         }
+
+        /* Sembunyikan teks ringkasan di samping path (tampilkan path saja) */
+        .swagger-ui .opblock-summary-description {
+            display: none;
+        }
+
+        .swagger-ui .opblock-summary-description {
+    display: none;
+}
     </style>
 </head>
 <body>
@@ -24,6 +33,9 @@
                 url: '/docs/api.json',
                 dom_id: '#swagger-ui',
                 deepLinking: true,
+                persistAuthorization: true, // token tidak hilang saat refresh halaman
+                docExpansion: 'none',       // semua endpoint tertutup di awal
+                filter: true,               // kolom pencarian endpoint
                 presets: [
                     SwaggerUIBundle.presets.apis,
                     SwaggerUIBundle.SwaggerUIStandalonePreset

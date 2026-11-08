@@ -48,12 +48,19 @@ class ChatController extends Controller
             'data' => [
                 'id' => $agent->id,
                 'name' => $agent->name,
+                // URL lengkap (sudah ditangani accessor di model User),
+                // supaya header halaman chat bisa langsung menampilkan avatar CS.
+                'avatar_url' => $agent->avatar_url,
             ],
         ], 200);
     }
 
     /**
      * Ambil daftar pesan berdasarkan chat_id (bisa berupa angka ID asli atau string unik room).
+     *
+     * Catatan: with('sender:id,name,avatar') tetap benar. Accessor
+     * `avatar_url` (di $appends model User) dihitung dari kolom `avatar`,
+     * jadi di JSON tiap pesan akan ada sender.avatar_url.
      */
     public function getMessages($chatId, Request $request)
     {

@@ -73,6 +73,19 @@ Route::get('/testing/simulate-qris-pay/{orderId}', function ($orderId) {
 });
 
 
+Route::post('/dev/login', function (\Illuminate\Http\Request $request, \App\Services\AuthService $authService) {
+    abort_unless(app()->environment('local'), 404);
+
+    $request->validate(['email' => 'required|email|exists:users,email']);
+
+    $user = \App\Models\User::where('email', $request->email)->firstOrFail();
+
+    return response()->json(
+        $authService->rotateTokens($user, (string) \Illuminate\Support\Str::uuid())
+    );
+});
+
+
 /*
 |--------------------------------------------------------------------------
 | Protected Routes (Wajib mengirim Header "Authorization: Bearer <token>")
